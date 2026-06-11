@@ -139,6 +139,17 @@ function buildWhatsAppUrl(compra) {
   return `https://wa.me/${onlyDigits(CONFIG.WHATSAPP_UMEC)}?text=${encodeURIComponent(message)}`;
 }
 
+function buildContatoWhatsAppUrl() {
+  const message = "Olá, quero falar sobre as fichas da Panqueca UMEC.";
+  return `https://wa.me/${onlyDigits(CONFIG.WHATSAPP_UMEC)}?text=${encodeURIComponent(message)}`;
+}
+
+function setWhatsappContato() {
+  const link = byId("whatsapp-contato");
+  if (!link) return;
+  link.href = buildContatoWhatsAppUrl();
+}
+
 function showPix(data, formData) {
   ultimaCompra = { ...data, ...formData };
 
@@ -354,3 +365,4 @@ consultaForm.addEventListener("submit", async (event) => {
 
 quantidadeInput.addEventListener("input", updateTotal);
 setEventoInfo();
+setWhatsappContato();
