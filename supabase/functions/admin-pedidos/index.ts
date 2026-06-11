@@ -147,7 +147,7 @@ async function gerarPdfGeral(supabase: ReturnType<typeof createClient>) {
       color: rgb(0.35, 0.35, 0.35),
     });
     y -= 28;
-    page.drawText("Senha", { x: 50, y, size: 11, font: bold });
+    page.drawText("Ficha", { x: 50, y, size: 11, font: bold });
     page.drawText("Nome", { x: 130, y, size: 11, font: bold });
     y -= 12;
     page.drawLine({ start: { x: 50, y }, end: { x: 545, y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });

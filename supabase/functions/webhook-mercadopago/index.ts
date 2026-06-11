@@ -111,6 +111,25 @@ function arrayBufferToBase64(buffer: ArrayBuffer) {
   return btoa(binary);
 }
 
+async function sendResendEmail(resendApiKey: string, payload: Record<string, unknown>) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.error("Erro Resend", result);
+    throw new Error("Não foi possível enviar o e-mail.");
+  }
+
+  return result;
+}
+
 async function enviarEmailComPdf(supabase: ReturnType<typeof createClient>, compra: Compra, pdfPath: string) {
   if (compra.email_enviado) return;
 
@@ -134,14 +153,14 @@ async function enviarEmailComPdf(supabase: ReturnType<typeof createClient>, comp
     currency: "BRL",
   });
 
-  const text = [
+  const buyerText = [
     `Olá, ${compra.nome}.`,
     "",
     "Seu pagamento foi confirmado.",
     "",
-    "Segue em anexo o PDF com suas senha(s) da refeição da UMEC.",
+    "Segue em anexo o PDF com suas ficha(s) da Panqueca UMEC.",
     "",
-    `Quantidade de senhas: ${compra.quantidade}`,
+    `Quantidade de fichas: ${compra.quantidade}`,
     `Valor total: ${valorTotal}`,
     "",
     "Você também pode acessar o site e consultar sua compra usando o código:",
@@ -152,35 +171,70 @@ async function enviarEmailComPdf(supabase: ReturnType<typeof createClient>, comp
     "UMEC",
   ].join("\n");
 
-  const emailPayload: Record<string, unknown> = {
-    from: fromEmail,
-    to: [compra.email],
-    subject: "Suas senhas da refeição UMEC",
-    text,
-    attachments: [
-      {
-        filename: `senhas-${compra.codigo_compra}.pdf`,
-        content,
-      },
-    ],
+  const adminText = [
+    "Nova compra paga na Panqueca UMEC.",
+    "",
+    `Nome: ${compra.nome}`,
+    `E-mail: ${compra.email}`,
+    `WhatsApp: ${compra.whatsapp}`,
+    `Código da compra: ${compra.codigo_compra}`,
+    `Quantidade de fichas: ${compra.quantidade}`,
+    `Valor total: ${valorTotal}`,
+    "",
+    "O PDF da ficha está em anexo para conferência.",
+  ].join("\n");
+
+  const attachment = {
+    filename: `fichas-${compra.codigo_compra}.pdf`,
+    content,
   };
 
-  if (adminEmail && adminEmail.toLowerCase() !== compra.email.toLowerCase()) {
-    emailPayload.bcc = [adminEmail];
+  const buyerPayload: Record<string, unknown> = {
+    from: fromEmail,
+    to: [compra.email],
+    subject: "Suas fichas da Panqueca UMEC",
+    text: buyerText,
+    attachments: [attachment],
+  };
+
+  const adminPayload: Record<string, unknown> | null = adminEmail
+    ? {
+        from: fromEmail,
+        to: [adminEmail],
+        subject: `Compra paga UMEC - ${compra.codigo_compra}`,
+        text: adminText,
+        attachments: [attachment],
+      }
+    : null;
+
+  let adminSent = false;
+  let buyerSent = false;
+  const errors: unknown[] = [];
+
+  if (adminPayload) {
+    try {
+      await sendResendEmail(resendApiKey, adminPayload);
+      adminSent = true;
+    } catch (error) {
+      console.error("Erro ao enviar e-mail para o Admin", error);
+      errors.push(error);
+    }
   }
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(emailPayload),
-  });
+  if (adminEmail && adminEmail.toLowerCase() === compra.email.toLowerCase()) {
+    buyerSent = adminSent;
+  } else {
+    try {
+      await sendResendEmail(resendApiKey, buyerPayload);
+      buyerSent = true;
+    } catch (error) {
+      console.error("Erro ao enviar e-mail para o comprador", error);
+      errors.push(error);
+    }
+  }
 
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    console.error("Erro Resend", result);
+  if (!adminSent && !buyerSent) {
+    console.error("Nenhum e-mail foi enviado", errors);
     throw new Error("Não foi possível enviar o e-mail.");
   }
 

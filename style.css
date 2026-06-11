@@ -43,7 +43,6 @@ textarea {
 .site-header {
   background:
     linear-gradient(90deg, rgba(0, 0, 0, 0.92), rgba(26, 24, 24, 0.84)),
-    url("assets/logo-umec.png") center right / contain no-repeat,
     #111;
   color: white;
   padding: 30px 0 46px;
@@ -564,7 +563,6 @@ textarea:focus {
     padding: 18px 0 54px;
     background:
       linear-gradient(180deg, rgba(0, 0, 0, 0.94), rgba(22, 22, 22, 0.9)),
-      url("assets/logo-umec.png") right top / 280px auto no-repeat,
       #111;
   }
 

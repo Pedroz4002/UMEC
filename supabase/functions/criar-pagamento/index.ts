@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = env("SUPABASE_URL");
     const serviceRoleKey = getSecretKey();
     const mercadoPagoToken = env("MERCADO_PAGO_ACCESS_TOKEN");
-    const valorUnitario = Number(env("VALOR_UNITARIO", "12.00"));
+    const valorUnitario = Number(env("VALOR_UNITARIO", "10.00"));
     const estoqueTotal = getEstoqueTotal();
     const eventoNome = env("EVENTO_NOME", "Refeição UMEC");
 
@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
     const { firstName, lastName } = splitName(payload.nome);
     const paymentBody = {
       transaction_amount: valorTotal,
-      description: `${eventoNome} - ${payload.quantidade} senha(s)`,
+      description: `${eventoNome} - ${payload.quantidade} ficha(s)`,
       payment_method_id: "pix",
       external_reference: codigoCompra,
       notification_url: env("MERCADO_PAGO_WEBHOOK_URL") || undefined,

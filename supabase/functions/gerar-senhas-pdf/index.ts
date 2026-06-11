@@ -70,7 +70,7 @@ async function gerarPdf(compra: Compra, senhas: Senha[]) {
   const pdfDoc = await PDFDocument.create();
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const eventName = env("EVENTO_NOME", "Refeição UMEC");
+  const eventName = env("EVENTO_NOME", "Panqueca UMEC");
   const eventDate = formatDate(env("EVENTO_DATA"));
   const eventLocal = formatDate(env("EVENTO_LOCAL", "UMEC Tancredo Neves"));
   const eventHorario = formatDate(env("EVENTO_HORARIO"));
@@ -86,9 +86,9 @@ async function gerarPdf(compra: Compra, senhas: Senha[]) {
 
     page.drawText("UMEC", { x: 78, y: height - 139, size: 28, font: fontBold, color: rgb(1, 1, 1) });
     page.drawText(eventName, { x: 170, y: height - 118, size: 13, font, color: rgb(0.9, 0.9, 0.9) });
-    page.drawText("SENHA DE REFEIÇÃO", { x: 170, y: height - 145, size: 22, font: fontBold, color: rgb(1, 1, 1) });
+    page.drawText("FICHA DA PANQUECA", { x: 170, y: height - 145, size: 22, font: fontBold, color: rgb(1, 1, 1) });
 
-    page.drawText("Número da senha", { x: 72, y: height - 252, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
+    page.drawText("Número da ficha", { x: 72, y: height - 252, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
     page.drawText(String(senha.numero_senha), { x: 72, y: height - 326, size: 58, font: fontBold, color: rgb(0.85, 0.08, 0.11) });
 
     page.drawText("Comprador", { x: 72, y: height - 390, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
@@ -104,7 +104,7 @@ async function gerarPdf(compra: Compra, senhas: Senha[]) {
     page.drawText(eventHorario, { x: 72, y: height - 664, size: 16, font, color: rgb(0.1, 0.1, 0.1) });
 
     page.drawRectangle({ x: 72, y: 108, width: width - 144, height: 58, color: rgb(0.96, 0.96, 0.96) });
-    page.drawText("Apresente esta senha no momento da refeição.", {
+    page.drawText("Apresente esta ficha no momento da entrega.", {
       x: 92,
       y: 132,
       size: 14,
@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
 
     if (senhasError || !senhas?.length) {
       console.error("Erro ao gerar senhas", senhasError);
-      return json({ error: "Não foi possível gerar as senhas." }, 500);
+      return json({ error: "Não foi possível gerar as fichas." }, 500);
     }
 
     const pdfBytes = await gerarPdf(compra, senhas as Senha[]);
