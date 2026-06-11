@@ -1,7 +1,7 @@
 create extension if not exists pgcrypto;
 
 create sequence if not exists public.senha_numero_seq
-  start with 1001
+  start with 1
   increment by 1
   no minvalue
   no maxvalue

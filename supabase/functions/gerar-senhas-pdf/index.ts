@@ -66,6 +66,10 @@ function formatDate(value: string) {
   return value || "A definir";
 }
 
+function formatFicha(numero: number) {
+  return String(numero).padStart(2, "0");
+}
+
 async function gerarPdf(compra: Compra, senhas: Senha[]) {
   const pdfDoc = await PDFDocument.create();
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -89,7 +93,7 @@ async function gerarPdf(compra: Compra, senhas: Senha[]) {
     page.drawText("FICHA DA PANQUECA", { x: 170, y: height - 145, size: 22, font: fontBold, color: rgb(1, 1, 1) });
 
     page.drawText("Número da ficha", { x: 72, y: height - 252, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
-    page.drawText(String(senha.numero_senha), { x: 72, y: height - 326, size: 58, font: fontBold, color: rgb(0.85, 0.08, 0.11) });
+    page.drawText(formatFicha(senha.numero_senha), { x: 72, y: height - 326, size: 58, font: fontBold, color: rgb(0.85, 0.08, 0.11) });
 
     page.drawText("Comprador", { x: 72, y: height - 390, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
     page.drawText(compra.nome, { x: 72, y: height - 420, size: 18, font: fontBold, color: rgb(0.1, 0.1, 0.1) });

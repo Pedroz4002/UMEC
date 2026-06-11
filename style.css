@@ -319,6 +319,15 @@ textarea:focus {
   color: white;
 }
 
+.danger-button {
+  border: 0;
+  border-radius: 8px;
+  background: #b42318;
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .whatsapp-button {
   background: #1f8f54;
   color: white;
@@ -678,6 +687,7 @@ textarea:focus {
   textarea,
   .primary-button,
   .secondary-button,
+  .danger-button,
   .whatsapp-button,
   .download-button,
   .ghost-button {

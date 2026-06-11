@@ -35,7 +35,7 @@ function setLoading(button, isLoading, loadingText) {
   button.disabled = false;
 }
 
-async function callAdmin(action) {
+async function callAdmin(action, payload = {}) {
   if (!adminSession) {
     throw new Error("Faça login no Admin.");
   }
@@ -46,7 +46,7 @@ async function callAdmin(action) {
       "Content-Type": "application/json",
       apikey: CONFIG.SUPABASE_ANON_KEY,
     },
-    body: JSON.stringify({ ...adminSession, action }),
+    body: JSON.stringify({ ...adminSession, action, ...payload }),
   });
 
   if (action === "pdf") {
@@ -78,13 +78,17 @@ function renderAdminPedidos(data) {
   adminResumo.textContent = `${pedidos.length} pedido(s) | ${data.total_fichas_pagas || 0} ficha(s) paga(s)`;
 
   if (!pedidos.length) {
-    adminPedidosBody.innerHTML = '<tr><td colspan="7">Nenhum pedido encontrado.</td></tr>';
+    adminPedidosBody.innerHTML = '<tr><td colspan="8">Nenhum pedido encontrado.</td></tr>';
     return;
   }
 
   adminPedidosBody.innerHTML = pedidos.map((pedido) => {
     const senhas = pedido.senhas?.length ? pedido.senhas.join(", ") : "-";
     const contato = `${escapeHtml(pedido.email)}<br>${escapeHtml(pedido.whatsapp)}`;
+    const canCancel = pedido.status_pagamento !== "cancelado";
+    const cancelButton = canCancel
+      ? `<button class="danger-button compact-button" type="button" data-cancelar-pedido="${escapeHtml(pedido.codigo_compra)}">Cancelar</button>`
+      : "-";
 
     return `
       <tr>
@@ -95,6 +99,7 @@ function renderAdminPedidos(data) {
         <td><span class="status-badge ${escapeHtml(pedido.status_pagamento)}">${escapeHtml(pedido.status_pagamento)}</span></td>
         <td>${escapeHtml(senhas)}</td>
         <td>${money.format(Number(pedido.valor_total || 0))}</td>
+        <td>${cancelButton}</td>
       </tr>
     `;
   }).join("");
@@ -147,6 +152,28 @@ byId("admin-pdf").addEventListener("click", async () => {
     link.remove();
     URL.revokeObjectURL(url);
     setMessage(adminMsg, "PDF geral baixado.", "success");
+  } catch (error) {
+    setMessage(adminMsg, error.message, "error");
+  } finally {
+    setLoading(button, false);
+  }
+});
+
+adminPedidosBody.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-cancelar-pedido]");
+  if (!button) return;
+
+  const codigoCompra = button.dataset.cancelarPedido;
+  const confirmed = window.confirm(
+    `Cancelar o pedido ${codigoCompra}?\n\nIsso libera a ficha no sistema, mas não faz estorno automático do Pix.`,
+  );
+  if (!confirmed) return;
+
+  setLoading(button, true, "Cancelando...");
+  try {
+    await callAdmin("cancel", { codigo_compra: codigoCompra });
+    setMessage(adminMsg, "Pedido cancelado e fichas liberadas.", "success");
+    await loadAdminPedidos();
   } catch (error) {
     setMessage(adminMsg, error.message, "error");
   } finally {
