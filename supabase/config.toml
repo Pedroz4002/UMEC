@@ -1,0 +1,13 @@
+project_id = "oabfkwtpjkhlqpyhscwb"
+
+[functions.criar-pagamento]
+verify_jwt = false
+
+[functions.consultar-compra]
+verify_jwt = false
+
+[functions.gerar-senhas-pdf]
+verify_jwt = false
+
+[functions.webhook-mercadopago]
+verify_jwt = false

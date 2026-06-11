@@ -37,11 +37,27 @@ function env(name: string, fallback = "") {
   return Deno.env.get(name) ?? fallback;
 }
 
-function assertServiceRole(req: Request) {
-  const serviceRoleKey = env("SUPABASE_SERVICE_ROLE_KEY");
-  const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
+function getSecretKey() {
+  const legacy = env("SUPABASE_SERVICE_ROLE_KEY") || env("SUPABASE_SECRET_KEY");
+  if (legacy) return legacy;
 
-  if (!serviceRoleKey || token !== serviceRoleKey) {
+  const rawKeys = env("SUPABASE_SECRET_KEYS");
+  if (!rawKeys) return "";
+
+  try {
+    const keys = JSON.parse(rawKeys) as Record<string, string>;
+    return keys.default ?? Object.values(keys).find(Boolean) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function assertServiceRole(req: Request) {
+  const serviceRoleKey = getSecretKey();
+  const authorizationToken = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
+  const apiKey = req.headers.get("apikey");
+
+  if (!serviceRoleKey || (authorizationToken !== serviceRoleKey && apiKey !== serviceRoleKey)) {
     throw new Error("Acesso não autorizado.");
   }
 }
@@ -116,7 +132,7 @@ Deno.serve(async (req) => {
     assertServiceRole(req);
 
     const supabaseUrl = env("SUPABASE_URL");
-    const serviceRoleKey = env("SUPABASE_SERVICE_ROLE_KEY");
+    const serviceRoleKey = getSecretKey();
 
     if (!supabaseUrl || !serviceRoleKey) {
       return json({ error: "Variáveis de ambiente do servidor não configuradas." }, 500);

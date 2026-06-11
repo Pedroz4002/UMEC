@@ -30,6 +30,21 @@ function env(name: string, fallback = "") {
   return Deno.env.get(name) ?? fallback;
 }
 
+function getSecretKey() {
+  const legacy = env("SUPABASE_SERVICE_ROLE_KEY") || env("SUPABASE_SECRET_KEY");
+  if (legacy) return legacy;
+
+  const rawKeys = env("SUPABASE_SECRET_KEYS");
+  if (!rawKeys) return "";
+
+  try {
+    const keys = JSON.parse(rawKeys) as Record<string, string>;
+    return keys.default ?? Object.values(keys).find(Boolean) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 async function safeJson(req: Request) {
   try {
     return await req.json();
@@ -70,7 +85,7 @@ async function gerarPdf(compraId: string) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${env("SUPABASE_SERVICE_ROLE_KEY")}`,
+      apikey: getSecretKey(),
     },
     body: JSON.stringify({ compra_id: compraId }),
   });
@@ -174,7 +189,7 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = env("SUPABASE_URL");
-    const serviceRoleKey = env("SUPABASE_SERVICE_ROLE_KEY");
+    const serviceRoleKey = getSecretKey();
     const mercadoPagoToken = env("MERCADO_PAGO_ACCESS_TOKEN");
 
     if (!supabaseUrl || !serviceRoleKey || !mercadoPagoToken) {
