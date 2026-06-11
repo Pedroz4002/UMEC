@@ -153,24 +153,6 @@ async function enviarEmailComPdf(supabase: ReturnType<typeof createClient>, comp
     currency: "BRL",
   });
 
-  const buyerText = [
-    `Olá, ${compra.nome}.`,
-    "",
-    "Seu pagamento foi confirmado.",
-    "",
-    "Segue em anexo o PDF com suas ficha(s) da Panqueca UMEC.",
-    "",
-    `Quantidade de fichas: ${compra.quantidade}`,
-    `Valor total: ${valorTotal}`,
-    "",
-    "Você também pode acessar o site e consultar sua compra usando o código:",
-    "",
-    compra.codigo_compra,
-    "",
-    "Atenciosamente,",
-    "UMEC",
-  ].join("\n");
-
   const adminText = [
     "Nova compra paga na Panqueca UMEC.",
     "",
@@ -189,54 +171,17 @@ async function enviarEmailComPdf(supabase: ReturnType<typeof createClient>, comp
     content,
   };
 
-  const buyerPayload: Record<string, unknown> = {
+  if (!adminEmail) {
+    throw new Error("UMEC_ADMIN_EMAIL não configurado.");
+  }
+
+  await sendResendEmail(resendApiKey, {
     from: fromEmail,
-    to: [compra.email],
-    subject: "Suas fichas da Panqueca UMEC",
-    text: buyerText,
+    to: [adminEmail],
+    subject: `Compra paga UMEC - ${compra.codigo_compra}`,
+    text: adminText,
     attachments: [attachment],
-  };
-
-  const adminPayload: Record<string, unknown> | null = adminEmail
-    ? {
-        from: fromEmail,
-        to: [adminEmail],
-        subject: `Compra paga UMEC - ${compra.codigo_compra}`,
-        text: adminText,
-        attachments: [attachment],
-      }
-    : null;
-
-  let adminSent = false;
-  let buyerSent = false;
-  const errors: unknown[] = [];
-
-  if (adminPayload) {
-    try {
-      await sendResendEmail(resendApiKey, adminPayload);
-      adminSent = true;
-    } catch (error) {
-      console.error("Erro ao enviar e-mail para o Admin", error);
-      errors.push(error);
-    }
-  }
-
-  if (adminEmail && adminEmail.toLowerCase() === compra.email.toLowerCase()) {
-    buyerSent = adminSent;
-  } else {
-    try {
-      await sendResendEmail(resendApiKey, buyerPayload);
-      buyerSent = true;
-    } catch (error) {
-      console.error("Erro ao enviar e-mail para o comprador", error);
-      errors.push(error);
-    }
-  }
-
-  if (!adminSent && !buyerSent) {
-    console.error("Nenhum e-mail foi enviado", errors);
-    throw new Error("Não foi possível enviar o e-mail.");
-  }
+  });
 
   await supabase
     .from("compras")
