@@ -1,7 +1,7 @@
 const CONFIG = {
   SUPABASE_URL: "https://oabfkwtpjkhlqpyhscwb.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_VSpoG2aPN10R7dYTA2S1gw_w20uEdVJ",
-  WHATSAPP_UMEC: "5599999999999",
+  WHATSAPP_UMEC: "5583998465279",
   VALOR_UNITARIO: 10.0,
   EVENTO_NOME: "Refeição UMEC",
   EVENTO_DATA: "A definir",
@@ -25,8 +25,18 @@ const consultaMsg = byId("consulta-mensagem");
 const pixArea = byId("pix-area");
 const consultaResultado = byId("consulta-resultado");
 const baixarPdf = byId("baixar-pdf");
+const pixStatus = byId("pix-status");
+const pixStatusTitle = byId("pix-status-title");
+const pixStatusText = byId("pix-status-text");
+const pixDownloadPdf = byId("pix-download-pdf");
+const pixPaymentDetails = byId("pix-payment-details");
 
 let ultimaCompra = null;
+let paymentPollTimer = null;
+let paymentPollDeadline = 0;
+
+const PAYMENT_POLL_INTERVAL_MS = 10000;
+const PAYMENT_POLL_TIMEOUT_MS = 30 * 60 * 1000;
 
 function setEventoInfo() {
   document.querySelector("[data-evento-nome]").textContent = CONFIG.EVENTO_NOME;
@@ -57,6 +67,19 @@ function setLoading(button, isLoading, loadingText) {
 
   button.textContent = button.dataset.originalText || button.textContent;
   button.disabled = false;
+}
+
+function setPixStatus(type, title, text) {
+  pixStatus.className = `payment-status ${type}`.trim();
+  pixStatusTitle.textContent = title;
+  pixStatusText.textContent = text;
+}
+
+function stopPaymentWatcher() {
+  if (paymentPollTimer) {
+    clearInterval(paymentPollTimer);
+    paymentPollTimer = null;
+  }
 }
 
 function onlyDigits(value) {
@@ -108,13 +131,69 @@ function buildWhatsAppUrl(compra) {
 function showPix(data, formData) {
   ultimaCompra = { ...data, ...formData };
 
+  stopPaymentWatcher();
   byId("codigo-compra").textContent = data.codigo_compra;
   byId("pix-copia-cola").value = data.qr_code;
   byId("pix-qrcode").src = `data:image/png;base64,${data.qr_code_base64}`;
   byId("whatsapp-comprovante").href = buildWhatsAppUrl(ultimaCompra);
+  pixDownloadPdf.classList.add("hidden");
+  pixDownloadPdf.removeAttribute("href");
+  pixPaymentDetails.classList.remove("hidden");
+  setPixStatus("pending", "Aguardando pagamento", "Depois que o Pix for pago, a confirmação aparece aqui automaticamente.");
 
   pixArea.classList.remove("hidden");
   pixArea.scrollIntoView({ behavior: "smooth", block: "start" });
+  startPaymentWatcher();
+}
+
+function showPaymentApproved(data) {
+  stopPaymentWatcher();
+  setPixStatus("success", "Pagamento Realizado", "Suas senhas foram geradas. O PDF já está disponível para download.");
+  pixDownloadPdf.href = data.download_url;
+  pixDownloadPdf.classList.remove("hidden");
+  setMessage(compraMsg, "Pagamento realizado. PDF disponível para download.", "success");
+}
+
+async function checkPaymentStatus({ showPending = false } = {}) {
+  if (!ultimaCompra?.codigo_compra) return false;
+
+  const data = await callFunction("consultar-compra", {
+    codigo_compra: ultimaCompra.codigo_compra,
+  });
+
+  if (data.status_pagamento === "pago" && data.download_url) {
+    showPaymentApproved(data);
+    return true;
+  }
+
+  if (data.status_pagamento === "pago") {
+    setPixStatus("preparing", "Pagamento Realizado", "Estamos preparando o PDF. O botão de download aparece em instantes.");
+    return false;
+  }
+
+  if (showPending) {
+    setPixStatus("pending", "Aguardando pagamento", "Pagamento ainda não confirmado. A verificação automática continua ativa.");
+  }
+
+  return false;
+}
+
+function startPaymentWatcher() {
+  paymentPollDeadline = Date.now() + PAYMENT_POLL_TIMEOUT_MS;
+
+  paymentPollTimer = setInterval(async () => {
+    if (Date.now() > paymentPollDeadline) {
+      stopPaymentWatcher();
+      setPixStatus("pending", "Aguardando pagamento", "Não recebemos a confirmação ainda. Use Consultar Compra para verificar depois.");
+      return;
+    }
+
+    try {
+      await checkPaymentStatus();
+    } catch (error) {
+      console.warn("Falha ao consultar pagamento", error);
+    }
+  }, PAYMENT_POLL_INTERVAL_MS);
 }
 
 compraForm.addEventListener("submit", async (event) => {
@@ -158,6 +237,28 @@ byId("copiar-pix").addEventListener("click", async () => {
     document.execCommand("copy");
     setMessage(compraMsg, "Código Pix copiado.", "success");
   }
+});
+
+byId("verificar-pagamento").addEventListener("click", async () => {
+  const button = byId("verificar-pagamento");
+
+  setLoading(button, true, "Verificando...");
+  try {
+    const approved = await checkPaymentStatus({ showPending: true });
+    if (!approved) {
+      setMessage(compraMsg, "Pagamento ainda não confirmado.", "");
+    }
+  } catch (error) {
+    setMessage(compraMsg, error.message, "error");
+  } finally {
+    setLoading(button, false);
+  }
+});
+
+byId("fechar-pix").addEventListener("click", () => {
+  pixPaymentDetails.classList.add("hidden");
+  setPixStatus("pending", "Acompanhando pagamento", "Você pode continuar nesta tela. Quando o pagamento for confirmado, o botão do PDF aparece aqui.");
+  pixArea.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 consultaForm.addEventListener("submit", async (event) => {

@@ -97,18 +97,34 @@
           <strong id="codigo-compra"></strong>
         </div>
 
-        <img id="pix-qrcode" class="pix-qrcode" alt="QR Code Pix" />
+        <div id="pix-status" class="payment-status pending" aria-live="polite">
+          <strong id="pix-status-title">Aguardando pagamento</strong>
+          <span id="pix-status-text">Depois que o Pix for pago, a confirmação aparece aqui automaticamente.</span>
+        </div>
 
-        <label>
-          Código Pix copia e cola
-          <textarea id="pix-copia-cola" rows="5" readonly></textarea>
-        </label>
+        <a id="pix-download-pdf" class="download-button hidden" href="#" download>
+          Baixar minhas senhas em PDF
+        </a>
 
-        <div class="button-row">
-          <button class="secondary-button" id="copiar-pix" type="button">Copiar código Pix</button>
-          <a class="whatsapp-button" id="whatsapp-comprovante" target="_blank" rel="noreferrer">
-            Enviar comprovante no WhatsApp
-          </a>
+        <div id="pix-payment-details">
+          <img id="pix-qrcode" class="pix-qrcode" alt="QR Code Pix" />
+
+          <label>
+            Código Pix copia e cola
+            <textarea id="pix-copia-cola" rows="5" readonly></textarea>
+          </label>
+
+          <div class="button-row">
+            <button class="secondary-button" id="copiar-pix" type="button">Copiar código Pix</button>
+            <a class="whatsapp-button" id="whatsapp-comprovante" target="_blank" rel="noreferrer">
+              Enviar comprovante no WhatsApp
+            </a>
+          </div>
+        </div>
+
+        <div class="button-row payment-actions">
+          <button class="secondary-button" id="verificar-pagamento" type="button">Verificar pagamento</button>
+          <button class="ghost-button" id="fechar-pix" type="button">Fechar tela Pix</button>
         </div>
       </section>
 

@@ -116,6 +116,7 @@ async function enviarEmailComPdf(supabase: ReturnType<typeof createClient>, comp
 
   const resendApiKey = env("RESEND_API_KEY");
   const fromEmail = env("RESEND_FROM_EMAIL");
+  const adminEmail = env("UMEC_ADMIN_EMAIL").trim();
   if (!resendApiKey || !fromEmail) throw new Error("Resend não configurado.");
 
   const { data: pdfFile, error: downloadError } = await supabase.storage
@@ -151,24 +152,30 @@ async function enviarEmailComPdf(supabase: ReturnType<typeof createClient>, comp
     "UMEC",
   ].join("\n");
 
+  const emailPayload: Record<string, unknown> = {
+    from: fromEmail,
+    to: [compra.email],
+    subject: "Suas senhas da refeição UMEC",
+    text,
+    attachments: [
+      {
+        filename: `senhas-${compra.codigo_compra}.pdf`,
+        content,
+      },
+    ],
+  };
+
+  if (adminEmail && adminEmail.toLowerCase() !== compra.email.toLowerCase()) {
+    emailPayload.bcc = [adminEmail];
+  }
+
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${resendApiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      from: fromEmail,
-      to: [compra.email],
-      subject: "Suas senhas da refeição UMEC",
-      text,
-      attachments: [
-        {
-          filename: `senhas-${compra.codigo_compra}.pdf`,
-          content,
-        },
-      ],
-    }),
+    body: JSON.stringify(emailPayload),
   });
 
   const result = await response.json().catch(() => ({}));
@@ -243,7 +250,12 @@ Deno.serve(async (req) => {
     }
 
     const pdfPath = compra.pdf_path || await gerarPdf(compra.id);
-    await enviarEmailComPdf(supabase, compra, pdfPath);
+
+    try {
+      await enviarEmailComPdf(supabase, compra, pdfPath);
+    } catch (emailError) {
+      console.error("Pagamento confirmado, mas o e-mail não foi enviado", emailError);
+    }
 
     return json({ received: true, status: "pago", codigo_compra: compra.codigo_compra });
   } catch (error) {

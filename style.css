@@ -199,7 +199,8 @@ textarea:focus {
 .primary-button,
 .secondary-button,
 .whatsapp-button,
-.download-button {
+.download-button,
+.ghost-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -229,10 +230,16 @@ textarea:focus {
   color: white;
 }
 
+.ghost-button {
+  background: #eef1f6;
+  color: #202734;
+}
+
 .primary-button:hover,
 .secondary-button:hover,
 .whatsapp-button:hover,
-.download-button:hover {
+.download-button:hover,
+.ghost-button:hover {
   filter: brightness(0.96);
   transform: translateY(-1px);
 }
@@ -274,6 +281,45 @@ textarea:focus {
   border-radius: 8px;
   padding: 12px;
   background: white;
+}
+
+.payment-status {
+  display: grid;
+  gap: 5px;
+  margin: 16px 0;
+  border: 1px solid #d7dde7;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 14px 16px;
+}
+
+.payment-status strong {
+  font-size: 1.05rem;
+}
+
+.payment-status span {
+  color: var(--muted);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.payment-status.success {
+  border-color: rgba(15, 122, 73, 0.3);
+  background: #ecfdf3;
+}
+
+.payment-status.success strong,
+.payment-status.success span {
+  color: var(--ok);
+}
+
+.payment-status.preparing {
+  border-color: rgba(217, 22, 31, 0.25);
+  background: #fff7f7;
+}
+
+.payment-actions {
+  margin-top: 12px;
 }
 
 .button-row {
