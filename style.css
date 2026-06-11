@@ -113,6 +113,9 @@ textarea {
 }
 
 .admin-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   align-self: start;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
@@ -122,12 +125,18 @@ textarea {
   padding: 10px 14px;
   font-weight: 800;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .main-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
   gap: 22px;
+  padding: 28px 0 44px;
+  margin-top: -34px;
+}
+
+.admin-main {
   padding: 28px 0 44px;
   margin-top: -34px;
 }
@@ -598,7 +607,8 @@ textarea:focus {
     min-height: 38px;
   }
 
-  .main-grid {
+  .main-grid,
+  .admin-main {
     gap: 16px;
     margin-top: -38px;
     padding-bottom: 28px;

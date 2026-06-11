@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin UMEC - Pedidos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header admin-site-header">
+      <div class="container header-grid">
+        <img src="assets/logo-umec.png" alt="UMEC Tancredo Neves" class="brand-logo" />
+        <div class="header-copy">
+          <span class="eyebrow">Área administrativa</span>
+          <h1>Pedidos UMEC</h1>
+          <p>Consulte todos os pedidos e baixe a lista geral de fichas para conferência.</p>
+        </div>
+        <a class="admin-toggle" href="index.html">Voltar</a>
+      </div>
+    </header>
+
+    <main class="container admin-main">
+      <section id="admin-panel" class="panel admin-panel" aria-labelledby="admin-titulo">
+        <div class="admin-heading">
+          <div>
+            <span class="section-kicker">Admin</span>
+            <h2 id="admin-titulo">Pedidos UMEC</h2>
+          </div>
+        </div>
+
+        <form id="admin-login-form" class="admin-login form-stack">
+          <label>
+            Usuário
+            <input id="admin-usuario" type="text" autocomplete="username" />
+          </label>
+          <label>
+            Senha
+            <input id="admin-senha" type="password" autocomplete="current-password" />
+          </label>
+          <button class="primary-button" id="admin-login" type="submit">Entrar</button>
+          <p id="admin-mensagem" class="message" role="status"></p>
+        </form>
+
+        <div id="admin-content" class="admin-content hidden">
+          <div class="admin-actions">
+            <div>
+              <strong id="admin-resumo">0 pedidos</strong>
+              <span>Pedidos em ordem de criação</span>
+            </div>
+            <button class="secondary-button compact-button" id="admin-refresh" type="button">Atualizar</button>
+            <button class="primary-button compact-button" id="admin-pdf" type="button">Baixar PDF geral</button>
+          </div>
+
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Pedido</th>
+                  <th>Nome</th>
+                  <th>Contato</th>
+                  <th>Status</th>
+                  <th>Fichas</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="admin-pedidos-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="admin.js"></script>
+  </body>
+</html>

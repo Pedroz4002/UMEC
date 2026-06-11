@@ -31,17 +31,10 @@ const pixStatusText = byId("pix-status-text");
 const pixDownloadPdf = byId("pix-download-pdf");
 const pixPaymentDetails = byId("pix-payment-details");
 const pixPaymentActions = byId("pix-payment-actions");
-const adminPanel = byId("admin-panel");
-const adminLoginForm = byId("admin-login-form");
-const adminContent = byId("admin-content");
-const adminMsg = byId("admin-mensagem");
-const adminPedidosBody = byId("admin-pedidos-body");
-const adminResumo = byId("admin-resumo");
 
 let ultimaCompra = null;
 let paymentPollTimer = null;
 let paymentPollDeadline = 0;
-let adminSession = null;
 
 const PAYMENT_POLL_INTERVAL_MS = 10000;
 const PAYMENT_POLL_TIMEOUT_MS = 15 * 60 * 1000;
@@ -131,78 +124,6 @@ async function callFunction(name, payload) {
   return data;
 }
 
-async function callAdmin(action) {
-  if (!adminSession) {
-    throw new Error("Faça login no Admin.");
-  }
-
-  const response = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/admin-pedidos`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: CONFIG.SUPABASE_ANON_KEY,
-    },
-    body: JSON.stringify({ ...adminSession, action }),
-  });
-
-  if (action === "pdf") {
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.error || "Não foi possível gerar o PDF geral.");
-    }
-    return await response.blob();
-  }
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || "Não foi possível carregar os pedidos.");
-  }
-  return data;
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function renderAdminPedidos(data) {
-  const pedidos = data.pedidos || [];
-  adminResumo.textContent = `${pedidos.length} pedido(s) | ${data.total_fichas_pagas || 0} ficha(s) paga(s)`;
-
-  if (!pedidos.length) {
-    adminPedidosBody.innerHTML = '<tr><td colspan="7">Nenhum pedido encontrado.</td></tr>';
-    return;
-  }
-
-  adminPedidosBody.innerHTML = pedidos.map((pedido) => {
-    const senhas = pedido.senhas?.length ? pedido.senhas.join(", ") : "-";
-    const contato = `${escapeHtml(pedido.email)}<br>${escapeHtml(pedido.whatsapp)}`;
-    return `
-      <tr>
-        <td>${escapeHtml(pedido.created_at_formatado)}</td>
-        <td>${escapeHtml(pedido.codigo_compra)}</td>
-        <td>${escapeHtml(pedido.nome)}</td>
-        <td>${contato}</td>
-        <td><span class="status-badge ${escapeHtml(pedido.status_pagamento)}">${escapeHtml(pedido.status_pagamento)}</span></td>
-        <td>${escapeHtml(senhas)}</td>
-        <td>${money.format(Number(pedido.valor_total || 0))}</td>
-      </tr>
-    `;
-  }).join("");
-}
-
-async function loadAdminPedidos() {
-  setMessage(adminMsg, "Carregando pedidos...");
-  const data = await callAdmin("list");
-  renderAdminPedidos(data);
-  adminContent.classList.remove("hidden");
-  setMessage(adminMsg, "Pedidos carregados.", "success");
-}
-
 function buildWhatsAppUrl(compra) {
   const message = [
     `Olá, realizei a compra de ${compra.quantidade} panqueca(s) da UMEC.`,
@@ -239,7 +160,7 @@ function showPix(data, formData) {
 
 function showPaymentApproved(data) {
   stopPaymentWatcher();
-  setPixStatus("success", "Pagamento Realizado", "Suas senhas foram geradas. O PDF já está disponível para download.");
+  setPixStatus("success", "Pagamento Realizado", "Suas fichas foram geradas. O PDF já está disponível para download.");
   pixDownloadPdf.href = data.download_url;
   pixDownloadPdf.classList.remove("hidden");
   pixPaymentDetails.classList.add("hidden");
@@ -432,59 +353,4 @@ consultaForm.addEventListener("submit", async (event) => {
 });
 
 quantidadeInput.addEventListener("input", updateTotal);
-
-byId("admin-open").addEventListener("click", () => {
-  adminPanel.classList.remove("hidden");
-  adminPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-});
-
-byId("admin-close").addEventListener("click", () => {
-  adminPanel.classList.add("hidden");
-});
-
-adminLoginForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  adminSession = {
-    usuario: byId("admin-usuario").value.trim(),
-    senha: byId("admin-senha").value,
-  };
-
-  try {
-    await loadAdminPedidos();
-  } catch (error) {
-    adminSession = null;
-    adminContent.classList.add("hidden");
-    setMessage(adminMsg, error.message, "error");
-  }
-});
-
-byId("admin-refresh").addEventListener("click", async () => {
-  try {
-    await loadAdminPedidos();
-  } catch (error) {
-    setMessage(adminMsg, error.message, "error");
-  }
-});
-
-byId("admin-pdf").addEventListener("click", async () => {
-  const button = byId("admin-pdf");
-  setLoading(button, true, "Gerando PDF...");
-  try {
-    const blob = await callAdmin("pdf");
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "pedidos-umec.pdf";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    setMessage(adminMsg, "PDF geral baixado.", "success");
-  } catch (error) {
-    setMessage(adminMsg, error.message, "error");
-  } finally {
-    setLoading(button, false);
-  }
-});
-
 setEventoInfo();
