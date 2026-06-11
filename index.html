@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UMEC - Senhas de Refeicao</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-grid">
+        <img src="assets/logo-umec.png" alt="UMEC Tancredo Neves" class="brand-logo" />
+        <div class="header-copy">
+          <span class="eyebrow">Venda online de senhas</span>
+          <h1>Refeição UMEC</h1>
+          <p>Gere seu Pix, aguarde a confirmação automática e receba suas senhas em PDF.</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="container main-grid">
+      <section class="panel event-panel" aria-labelledby="evento-titulo">
+        <span class="section-kicker">Evento</span>
+        <h2 id="evento-titulo">Informações da refeição</h2>
+
+        <dl class="event-list">
+          <div>
+            <dt>Nome</dt>
+            <dd data-evento-nome>Refeição UMEC</dd>
+          </div>
+          <div>
+            <dt>Data</dt>
+            <dd data-evento-data>A definir</dd>
+          </div>
+          <div>
+            <dt>Local</dt>
+            <dd data-evento-local>UMEC Tancredo Neves</dd>
+          </div>
+          <div>
+            <dt>Horário</dt>
+            <dd data-evento-horario>A definir</dd>
+          </div>
+          <div>
+            <dt>Valor unitário</dt>
+            <dd data-valor-unitario>R$ 10,00</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="panel form-panel" aria-labelledby="compra-titulo">
+        <span class="section-kicker">Comprar</span>
+        <h2 id="compra-titulo">Gerar Pix</h2>
+
+        <form id="compra-form" class="form-stack">
+          <label>
+            Nome completo
+            <input id="nome" name="nome" type="text" autocomplete="name" required />
+          </label>
+
+          <label>
+            WhatsApp
+            <input id="whatsapp" name="whatsapp" type="tel" autocomplete="tel" required />
+          </label>
+
+          <label>
+            E-mail
+            <input id="email" name="email" type="email" autocomplete="email" required />
+          </label>
+
+          <label>
+            Quantidade de senhas
+            <input id="quantidade" name="quantidade" type="number" min="1" max="50" value="1" required />
+          </label>
+
+          <div class="total-box" aria-live="polite">
+            <span>Total</span>
+            <strong id="valor-total">R$ 10,00</strong>
+          </div>
+
+          <button class="primary-button" id="gerar-pix" type="submit">Gerar Pix</button>
+          <p id="compra-mensagem" class="message" role="status"></p>
+        </form>
+      </section>
+
+      <section id="pix-area" class="panel pix-panel hidden" aria-labelledby="pix-titulo">
+        <span class="section-kicker">Pagamento</span>
+        <h2 id="pix-titulo">Pix gerado</h2>
+
+        <div class="purchase-code">
+          <span>Código da compra</span>
+          <strong id="codigo-compra"></strong>
+        </div>
+
+        <img id="pix-qrcode" class="pix-qrcode" alt="QR Code Pix" />
+
+        <label>
+          Código Pix copia e cola
+          <textarea id="pix-copia-cola" rows="5" readonly></textarea>
+        </label>
+
+        <div class="button-row">
+          <button class="secondary-button" id="copiar-pix" type="button">Copiar código Pix</button>
+          <a class="whatsapp-button" id="whatsapp-comprovante" target="_blank" rel="noreferrer">
+            Enviar comprovante no WhatsApp
+          </a>
+        </div>
+      </section>
+
+      <section class="panel consulta-panel" aria-labelledby="consulta-titulo">
+        <span class="section-kicker">Consultar</span>
+        <h2 id="consulta-titulo">Consultar Compra</h2>
+
+        <form id="consulta-form" class="form-stack">
+          <label>
+            Código da compra
+            <input id="consulta-codigo" name="codigo_compra" type="text" autocomplete="off" />
+          </label>
+
+          <div class="or-divider">ou</div>
+
+          <label>
+            E-mail
+            <input id="consulta-email" name="email" type="email" autocomplete="email" />
+          </label>
+
+          <label>
+            WhatsApp
+            <input id="consulta-whatsapp" name="whatsapp" type="tel" autocomplete="tel" />
+          </label>
+
+          <button class="primary-button" id="consultar-compra" type="submit">Consultar</button>
+          <p id="consulta-mensagem" class="message" role="status"></p>
+        </form>
+
+        <div id="consulta-resultado" class="consulta-resultado hidden">
+          <dl>
+            <div>
+              <dt>Status</dt>
+              <dd id="resultado-status"></dd>
+            </div>
+            <div>
+              <dt>Quantidade</dt>
+              <dd id="resultado-quantidade"></dd>
+            </div>
+            <div>
+              <dt>Valor total</dt>
+              <dd id="resultado-total"></dd>
+            </div>
+            <div>
+              <dt>Criada em</dt>
+              <dd id="resultado-data"></dd>
+            </div>
+          </dl>
+          <a id="baixar-pdf" class="download-button hidden" href="#" download>
+            Baixar minhas senhas em PDF
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>

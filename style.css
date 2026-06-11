@@ -1,0 +1,342 @@
+:root {
+  color-scheme: light;
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-strong: #111111;
+  --text: #171717;
+  --muted: #626976;
+  --line: #e3e6eb;
+  --brand: #d9161f;
+  --brand-dark: #a80d15;
+  --ok: #0f7a49;
+  --error: #b42318;
+  --shadow: 0 20px 50px rgba(16, 24, 40, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.container {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.site-header {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.88), rgba(24, 24, 24, 0.8)),
+    url("assets/logo-umec.png") center right / contain no-repeat,
+    #111;
+  color: white;
+  padding: 38px 0;
+}
+
+.header-grid {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 28px;
+  align-items: center;
+}
+
+.brand-logo {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+.header-copy {
+  max-width: 680px;
+}
+
+.eyebrow,
+.section-kicker {
+  color: var(--brand);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.header-copy h1 {
+  margin: 8px 0 8px;
+  font-size: clamp(2.4rem, 7vw, 5.2rem);
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+.header-copy p {
+  margin: 0;
+  color: #e6e6e6;
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 0.92fr 1.08fr;
+  gap: 22px;
+  padding: 26px 0 44px;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+}
+
+.panel h2 {
+  margin: 8px 0 20px;
+  font-size: 1.45rem;
+  letter-spacing: 0;
+}
+
+.event-panel,
+.consulta-panel {
+  align-self: start;
+}
+
+.event-list,
+.consulta-resultado dl {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.event-list div,
+.consulta-resultado dl div,
+.purchase-code {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+dt,
+.purchase-code span {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 800;
+}
+
+.form-stack {
+  display: grid;
+  gap: 16px;
+}
+
+label {
+  display: grid;
+  gap: 8px;
+  color: #343a46;
+  font-weight: 700;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid #cfd5df;
+  border-radius: 8px;
+  background: white;
+  color: var(--text);
+  padding: 12px 13px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+textarea {
+  resize: vertical;
+}
+
+input:focus,
+textarea:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px rgba(217, 22, 31, 0.12);
+}
+
+.total-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 58px;
+  background: #111;
+  color: white;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.total-box span {
+  color: #d6d6d6;
+  font-weight: 700;
+}
+
+.total-box strong {
+  font-size: 1.35rem;
+}
+
+.primary-button,
+.secondary-button,
+.whatsapp-button,
+.download-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  text-decoration: none;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.primary-button,
+.download-button {
+  background: var(--brand);
+  color: white;
+}
+
+.secondary-button {
+  background: #111;
+  color: white;
+}
+
+.whatsapp-button {
+  background: #1f8f54;
+  color: white;
+}
+
+.primary-button:hover,
+.secondary-button:hover,
+.whatsapp-button:hover,
+.download-button:hover {
+  filter: brightness(0.96);
+  transform: translateY(-1px);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
+}
+
+.message {
+  min-height: 22px;
+  margin: 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.message.success {
+  color: var(--ok);
+}
+
+.message.error {
+  color: var(--error);
+}
+
+.pix-panel,
+.consulta-panel {
+  grid-column: span 2;
+}
+
+.pix-qrcode {
+  display: block;
+  width: min(280px, 100%);
+  aspect-ratio: 1;
+  object-fit: contain;
+  margin: 18px auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: white;
+}
+
+.button-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.or-divider {
+  color: var(--muted);
+  font-weight: 800;
+  text-align: center;
+}
+
+.consulta-resultado {
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.download-button {
+  margin-top: 18px;
+  width: 100%;
+}
+
+.hidden {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .site-header {
+    padding: 24px 0;
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, 0.92), rgba(24, 24, 24, 0.86)),
+      url("assets/logo-umec.png") center top / cover no-repeat,
+      #111;
+  }
+
+  .header-grid,
+  .main-grid,
+  .button-row {
+    grid-template-columns: 1fr;
+  }
+
+  .brand-logo {
+    width: 112px;
+    height: 112px;
+  }
+
+  .pix-panel,
+  .consulta-panel {
+    grid-column: span 1;
+  }
+
+  .event-list div,
+  .consulta-resultado dl div,
+  .purchase-code {
+    display: grid;
+    gap: 4px;
+  }
+
+  dd {
+    text-align: left;
+  }
+}

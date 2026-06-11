@@ -1,0 +1,175 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+type CompraPayload = {
+  nome?: string;
+  whatsapp?: string;
+  email?: string;
+  quantidade?: number;
+};
+
+function json(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function env(name: string, fallback = "") {
+  return Deno.env.get(name) ?? fallback;
+}
+
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function normalizePayload(payload: CompraPayload) {
+  const nome = String(payload.nome ?? "").trim();
+  const whatsapp = onlyDigits(String(payload.whatsapp ?? ""));
+  const email = String(payload.email ?? "").trim().toLowerCase();
+  const quantidade = Number(payload.quantidade);
+
+  if (nome.length < 3) throw new Error("Informe o nome completo.");
+  if (!/^\d{10,14}$/.test(whatsapp)) throw new Error("Informe um WhatsApp válido.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Informe um e-mail válido.");
+  if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > 50) {
+    throw new Error("Informe uma quantidade entre 1 e 50.");
+  }
+
+  return { nome, whatsapp, email, quantidade };
+}
+
+function createCodigoCompra() {
+  const time = Date.now().toString(36).toUpperCase();
+  const random = crypto.randomUUID().slice(0, 8).toUpperCase();
+  return `UMEC-${time}-${random}`;
+}
+
+function splitName(fullName: string) {
+  const parts = fullName.trim().split(/\s+/);
+  const firstName = parts.shift() ?? fullName;
+  const lastName = parts.join(" ") || "Cliente";
+  return { firstName, lastName };
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
+
+  try {
+    const supabaseUrl = env("SUPABASE_URL");
+    const serviceRoleKey = env("SUPABASE_SERVICE_ROLE_KEY");
+    const mercadoPagoToken = env("MERCADO_PAGO_ACCESS_TOKEN");
+    const valorUnitario = Number(env("VALOR_UNITARIO", "10.00"));
+    const eventoNome = env("EVENTO_NOME", "Refeição UMEC");
+
+    if (!supabaseUrl || !serviceRoleKey || !mercadoPagoToken) {
+      return json({ error: "Variáveis de ambiente do servidor não configuradas." }, 500);
+    }
+
+    if (!Number.isFinite(valorUnitario) || valorUnitario <= 0) {
+      return json({ error: "VALOR_UNITARIO inválido." }, 500);
+    }
+
+    const payload = normalizePayload(await req.json());
+    const valorTotal = Number((payload.quantidade * valorUnitario).toFixed(2));
+    const codigoCompra = createCodigoCompra();
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    const { data: compra, error: insertError } = await supabase
+      .from("compras")
+      .insert({
+        nome: payload.nome,
+        whatsapp: payload.whatsapp,
+        email: payload.email,
+        quantidade: payload.quantidade,
+        valor_unitario: valorUnitario,
+        valor_total: valorTotal,
+        status_pagamento: "pendente",
+        codigo_compra: codigoCompra,
+      })
+      .select()
+      .single();
+
+    if (insertError || !compra) {
+      console.error("Erro ao criar compra", insertError);
+      return json({ error: "Não foi possível registrar a compra." }, 500);
+    }
+
+    const { firstName, lastName } = splitName(payload.nome);
+    const paymentBody = {
+      transaction_amount: valorTotal,
+      description: `${eventoNome} - ${payload.quantidade} senha(s)`,
+      payment_method_id: "pix",
+      external_reference: codigoCompra,
+      notification_url: env("MERCADO_PAGO_WEBHOOK_URL") || undefined,
+      payer: {
+        email: payload.email,
+        first_name: firstName,
+        last_name: lastName,
+      },
+      metadata: {
+        compra_id: compra.id,
+        codigo_compra: codigoCompra,
+      },
+    };
+
+    const mercadoPagoResponse = await fetch("https://api.mercadopago.com/v1/payments", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${mercadoPagoToken}`,
+        "Content-Type": "application/json",
+        "X-Idempotency-Key": crypto.randomUUID(),
+      },
+      body: JSON.stringify(paymentBody),
+    });
+
+    const payment = await mercadoPagoResponse.json();
+
+    if (!mercadoPagoResponse.ok) {
+      console.error("Erro Mercado Pago", payment);
+      await supabase.from("compras").update({ status_pagamento: "erro" }).eq("id", compra.id);
+      return json({ error: "Não foi possível gerar o Pix no Mercado Pago." }, 502);
+    }
+
+    const transactionData = payment?.point_of_interaction?.transaction_data ?? {};
+    const qrCode = transactionData.qr_code;
+    const qrCodeBase64 = transactionData.qr_code_base64;
+
+    if (!payment?.id || !qrCode || !qrCodeBase64) {
+      console.error("Resposta Pix incompleta", payment);
+      await supabase.from("compras").update({ status_pagamento: "erro" }).eq("id", compra.id);
+      return json({ error: "Mercado Pago não retornou os dados do Pix." }, 502);
+    }
+
+    const { error: updateError } = await supabase
+      .from("compras")
+      .update({
+        mercado_pago_payment_id: String(payment.id),
+        pix_qr_code: qrCode,
+        pix_qr_code_base64: qrCodeBase64,
+      })
+      .eq("id", compra.id);
+
+    if (updateError) {
+      console.error("Erro ao salvar Pix", updateError);
+      return json({ error: "Pix gerado, mas não foi possível salvar a compra." }, 500);
+    }
+
+    return json({
+      codigo_compra: codigoCompra,
+      qr_code: qrCode,
+      qr_code_base64: qrCodeBase64,
+      valor_total: valorTotal,
+      status_pagamento: "pendente",
+    });
+  } catch (error) {
+    console.error(error);
+    return json({ error: error instanceof Error ? error.message : "Erro inesperado." }, 400);
+  }
+});
