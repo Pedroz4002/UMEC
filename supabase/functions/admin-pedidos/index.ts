@@ -94,6 +94,11 @@ function formatPhone(value: string) {
   return value || "-";
 }
 
+function getEstoqueTotal() {
+  const estoqueTotal = Number(env("ESTOQUE_TOTAL", "50"));
+  return Number.isInteger(estoqueTotal) && estoqueTotal > 0 ? estoqueTotal : 50;
+}
+
 async function getPedidos(supabase: ReturnType<typeof createClient>) {
   const { data: compras, error: comprasError } = await supabase
     .from("compras")
@@ -292,11 +297,21 @@ Deno.serve(async (req) => {
     }
 
     const pedidos = await getPedidos(supabase);
+    const estoqueTotal = getEstoqueTotal();
+    const totalFichasVendidas = pedidos
+      .filter((pedido) => pedido.status_pagamento === "pago")
+      .reduce((total, pedido) => total + Number(pedido.quantidade ?? 0), 0);
+    const totalFichasReservadas = pedidos
+      .filter((pedido) => ["pendente", "pago"].includes(pedido.status_pagamento))
+      .reduce((total, pedido) => total + Number(pedido.quantidade ?? 0), 0);
+
     return json({
       pedidos,
       total_pedidos: pedidos.length,
       total_pagos: pedidos.filter((pedido) => pedido.status_pagamento === "pago").length,
       total_fichas_pagas: pedidos.reduce((total, pedido) => total + pedido.senhas.length, 0),
+      total_fichas_vendidas: totalFichasVendidas,
+      total_fichas_disponiveis: Math.max(estoqueTotal - totalFichasReservadas, 0),
       total_arrecadado: pedidos
         .filter((pedido) => pedido.status_pagamento === "pago")
         .reduce((total, pedido) => total + Number(pedido.valor_total ?? 0), 0),

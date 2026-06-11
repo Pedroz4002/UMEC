@@ -15,6 +15,8 @@ const adminContent = byId("admin-content");
 const adminMsg = byId("admin-mensagem");
 const adminPedidosBody = byId("admin-pedidos-body");
 const adminResumo = byId("admin-resumo");
+const adminFichasVendidas = byId("admin-fichas-vendidas");
+const adminFichasDisponiveis = byId("admin-fichas-disponiveis");
 
 let adminSession = null;
 
@@ -76,6 +78,8 @@ function escapeHtml(value) {
 function renderAdminPedidos(data) {
   const pedidos = data.pedidos || [];
   adminResumo.textContent = `${pedidos.length} pedido(s) | ${data.total_fichas_pagas || 0} ficha(s) paga(s)`;
+  adminFichasVendidas.textContent = String(data.total_fichas_vendidas ?? data.total_fichas_pagas ?? 0);
+  adminFichasDisponiveis.textContent = String(data.total_fichas_disponiveis ?? "-");
 
   if (!pedidos.length) {
     adminPedidosBody.innerHTML = '<tr><td colspan="8">Nenhum pedido encontrado.</td></tr>';
