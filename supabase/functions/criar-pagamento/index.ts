@@ -39,33 +39,6 @@ function getSecretKey() {
   }
 }
 
-function getPublishableKeys() {
-  const keys = new Set<string>();
-  const legacy = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY");
-  if (legacy) keys.add(legacy);
-
-  const rawKeys = env("SUPABASE_PUBLISHABLE_KEYS");
-  if (rawKeys) {
-    try {
-      for (const key of Object.values(JSON.parse(rawKeys) as Record<string, string>)) {
-        if (key) keys.add(key);
-      }
-    } catch {
-      // Ignore malformed platform JSON and fall back to legacy env names.
-    }
-  }
-
-  return [...keys];
-}
-
-function assertPublishableKey(req: Request) {
-  const apiKey = req.headers.get("apikey") ?? "";
-  const keys = getPublishableKeys();
-
-  if (!keys.length) throw new Error("Chave pública da Supabase não disponível.");
-  if (!keys.includes(apiKey)) throw new Error("Acesso não autorizado.");
-}
-
 function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
 }
@@ -104,8 +77,6 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
 
   try {
-    assertPublishableKey(req);
-
     const supabaseUrl = env("SUPABASE_URL");
     const serviceRoleKey = getSecretKey();
     const mercadoPagoToken = env("MERCADO_PAGO_ACCESS_TOKEN");
@@ -215,6 +186,6 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error(error);
     const message = error instanceof Error ? error.message : "Erro inesperado.";
-    return json({ error: message }, message === "Acesso não autorizado." ? 401 : 400);
+    return json({ error: message }, 400);
   }
 });
