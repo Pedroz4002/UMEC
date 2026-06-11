@@ -67,7 +67,8 @@ MERCADO_PAGO_ACCESS_TOKEN=
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=
 WHATSAPP_UMEC=
-VALOR_UNITARIO=10.00
+VALOR_UNITARIO=12.00
+ESTOQUE_TOTAL=
 EVENTO_NOME=Refeição UMEC
 EVENTO_DATA=
 EVENTO_LOCAL=
@@ -85,7 +86,7 @@ supabase secrets set MERCADO_PAGO_ACCESS_TOKEN="SEU_ACCESS_TOKEN"
 supabase secrets set RESEND_API_KEY="SUA_RESEND_API_KEY"
 supabase secrets set RESEND_FROM_EMAIL="UMEC <senhas@seudominio.com>"
 supabase secrets set WHATSAPP_UMEC="5599999999999"
-supabase secrets set VALOR_UNITARIO="10.00"
+supabase secrets set VALOR_UNITARIO="12.00"
 supabase secrets set EVENTO_NOME="Refeição UMEC"
 supabase secrets set EVENTO_DATA="DD/MM/AAAA"
 supabase secrets set EVENTO_LOCAL="UMEC Tancredo Neves"
@@ -101,7 +102,7 @@ Edite `script.js` e troque:
 SUPABASE_URL: "https://SEU-PROJETO.supabase.co",
 SUPABASE_ANON_KEY: "SUA_SUPABASE_ANON_KEY",
 WHATSAPP_UMEC: "5599999999999",
-VALOR_UNITARIO: 10.0,
+VALOR_UNITARIO: 12.0,
 EVENTO_NOME: "Refeição UMEC",
 EVENTO_DATA: "A definir",
 EVENTO_LOCAL: "UMEC Tancredo Neves",

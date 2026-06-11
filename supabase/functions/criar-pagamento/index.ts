@@ -43,6 +43,18 @@ function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
 }
 
+function getEstoqueTotal() {
+  const raw = env("ESTOQUE_TOTAL").trim();
+  if (!raw) return null;
+
+  const estoqueTotal = Number(raw);
+  if (!Number.isInteger(estoqueTotal) || estoqueTotal <= 0) {
+    throw new Error("ESTOQUE_TOTAL inválido.");
+  }
+
+  return estoqueTotal;
+}
+
 function normalizePayload(payload: CompraPayload) {
   const nome = String(payload.nome ?? "").trim();
   const whatsapp = onlyDigits(String(payload.whatsapp ?? ""));
@@ -72,6 +84,34 @@ function splitName(fullName: string) {
   return { firstName, lastName };
 }
 
+async function assertEstoqueDisponivel(
+  supabase: ReturnType<typeof createClient>,
+  quantidadeSolicitada: number,
+  estoqueTotal: number | null,
+) {
+  if (!estoqueTotal) return;
+
+  const { data, error } = await supabase
+    .from("compras")
+    .select("quantidade")
+    .in("status_pagamento", ["pendente", "pago"]);
+
+  if (error) {
+    console.error("Erro ao consultar estoque", error);
+    throw new Error("Não foi possível consultar a disponibilidade.");
+  }
+
+  const quantidadeReservada = (data ?? []).reduce(
+    (total, compra) => total + Number(compra.quantidade ?? 0),
+    0,
+  );
+  const disponivel = estoqueTotal - quantidadeReservada;
+
+  if (quantidadeSolicitada > disponivel) {
+    throw new Error(`Restam apenas ${Math.max(disponivel, 0)} panqueca(s) disponíveis.`);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
@@ -80,7 +120,8 @@ Deno.serve(async (req) => {
     const supabaseUrl = env("SUPABASE_URL");
     const serviceRoleKey = getSecretKey();
     const mercadoPagoToken = env("MERCADO_PAGO_ACCESS_TOKEN");
-    const valorUnitario = Number(env("VALOR_UNITARIO", "10.00"));
+    const valorUnitario = Number(env("VALOR_UNITARIO", "12.00"));
+    const estoqueTotal = getEstoqueTotal();
     const eventoNome = env("EVENTO_NOME", "Refeição UMEC");
 
     if (!supabaseUrl || !serviceRoleKey || !mercadoPagoToken) {
@@ -95,6 +136,8 @@ Deno.serve(async (req) => {
     const valorTotal = Number((payload.quantidade * valorUnitario).toFixed(2));
     const codigoCompra = createCodigoCompra();
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    await assertEstoqueDisponivel(supabase, payload.quantidade, estoqueTotal);
 
     const { data: compra, error: insertError } = await supabase
       .from("compras")

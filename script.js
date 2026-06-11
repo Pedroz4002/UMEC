@@ -2,7 +2,7 @@ const CONFIG = {
   SUPABASE_URL: "https://oabfkwtpjkhlqpyhscwb.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_VSpoG2aPN10R7dYTA2S1gw_w20uEdVJ",
   WHATSAPP_UMEC: "5583998465279",
-  VALOR_UNITARIO: 10.0,
+  VALOR_UNITARIO: 12.0,
   EVENTO_NOME: "Refeição UMEC",
   EVENTO_DATA: "A definir",
   EVENTO_LOCAL: "UMEC Tancredo Neves",
