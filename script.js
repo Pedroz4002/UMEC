@@ -30,6 +30,7 @@ const pixStatusTitle = byId("pix-status-title");
 const pixStatusText = byId("pix-status-text");
 const pixDownloadPdf = byId("pix-download-pdf");
 const pixPaymentDetails = byId("pix-payment-details");
+const pixPaymentActions = byId("pix-payment-actions");
 
 let ultimaCompra = null;
 let paymentPollTimer = null;
@@ -39,11 +40,21 @@ const PAYMENT_POLL_INTERVAL_MS = 10000;
 const PAYMENT_POLL_TIMEOUT_MS = 15 * 60 * 1000;
 
 function setEventoInfo() {
-  document.querySelector("[data-evento-nome]").textContent = CONFIG.EVENTO_NOME;
-  document.querySelector("[data-evento-data]").textContent = CONFIG.EVENTO_DATA;
-  document.querySelector("[data-evento-local]").textContent = CONFIG.EVENTO_LOCAL;
-  document.querySelector("[data-evento-horario]").textContent = CONFIG.EVENTO_HORARIO;
-  document.querySelector("[data-valor-unitario]").textContent = money.format(CONFIG.VALOR_UNITARIO);
+  document.querySelectorAll("[data-evento-nome]").forEach((element) => {
+    element.textContent = CONFIG.EVENTO_NOME;
+  });
+  document.querySelectorAll("[data-evento-data]").forEach((element) => {
+    element.textContent = CONFIG.EVENTO_DATA;
+  });
+  document.querySelectorAll("[data-evento-local]").forEach((element) => {
+    element.textContent = CONFIG.EVENTO_LOCAL;
+  });
+  document.querySelectorAll("[data-evento-horario]").forEach((element) => {
+    element.textContent = CONFIG.EVENTO_HORARIO;
+  });
+  document.querySelectorAll("[data-valor-unitario]").forEach((element) => {
+    element.textContent = money.format(CONFIG.VALOR_UNITARIO);
+  });
   updateTotal();
 }
 
@@ -139,6 +150,7 @@ function showPix(data, formData) {
   pixDownloadPdf.classList.add("hidden");
   pixDownloadPdf.removeAttribute("href");
   pixPaymentDetails.classList.remove("hidden");
+  pixPaymentActions.classList.remove("hidden");
   setPixStatus("pending", "Aguardando pagamento", "Depois que o Pix for pago, a confirmação aparece aqui automaticamente por até 15 minutos.");
 
   pixArea.classList.remove("hidden");
@@ -151,6 +163,8 @@ function showPaymentApproved(data) {
   setPixStatus("success", "Pagamento Realizado", "Suas senhas foram geradas. O PDF já está disponível para download.");
   pixDownloadPdf.href = data.download_url;
   pixDownloadPdf.classList.remove("hidden");
+  pixPaymentDetails.classList.add("hidden");
+  pixPaymentActions.classList.add("hidden");
   setMessage(compraMsg, "Pagamento realizado. PDF disponível para download.", "success");
 }
 
@@ -168,6 +182,8 @@ async function checkPaymentStatus({ showPending = false } = {}) {
 
   if (data.status_pagamento === "pago") {
     setPixStatus("preparing", "Pagamento Realizado", "Estamos preparando o PDF. O botão de download aparece em instantes.");
+    pixPaymentDetails.classList.add("hidden");
+    pixPaymentActions.classList.add("hidden");
     return false;
   }
 
@@ -283,7 +299,37 @@ consultaForm.addEventListener("submit", async (event) => {
 
   try {
     const data = await callFunction("consultar-compra", payload);
+
+    if (data.tipo_consulta === "resumo_cliente") {
+      byId("resultado-status-label").textContent = "Resultado";
+      byId("resultado-quantidade-label").textContent = "Fichas pagas";
+      byId("resultado-total-label").textContent = "Total pago";
+      byId("resultado-data-label").textContent = "Compras pagas";
+
+      byId("resultado-status").textContent = data.quantidade_total_paga > 0
+        ? "Pagamentos confirmados"
+        : "Nenhuma ficha paga";
+      byId("resultado-quantidade").textContent = `${data.quantidade_total_paga || 0} ficha(s)`;
+      byId("resultado-total").textContent = money.format(Number(data.valor_total_pago || 0));
+      byId("resultado-data").textContent = `${data.compras_pagas || 0} compra(s)`;
+
+      consultaResultado.classList.remove("hidden");
+      setMessage(
+        consultaMsg,
+        data.quantidade_total_paga > 0
+          ? "Total de fichas pagas encontrado. Para baixar um PDF, consulte pelo código da compra."
+          : "Nenhuma compra paga encontrada para esse contato.",
+        data.quantidade_total_paga > 0 ? "success" : "",
+      );
+      return;
+    }
+
     const isPago = data.status_pagamento === "pago";
+
+    byId("resultado-status-label").textContent = "Status";
+    byId("resultado-quantidade-label").textContent = "Quantidade";
+    byId("resultado-total-label").textContent = "Valor total";
+    byId("resultado-data-label").textContent = "Criada em";
 
     byId("resultado-status").textContent = isPago ? "Pagamento confirmado" : "Pagamento ainda não confirmado";
     byId("resultado-quantidade").textContent = data.quantidade || "-";

@@ -114,7 +114,7 @@ textarea {
 
 .main-grid {
   display: grid;
-  grid-template-columns: 0.92fr 1.08fr;
+  grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
   gap: 22px;
   padding: 28px 0 44px;
   margin-top: -34px;
@@ -134,7 +134,10 @@ textarea {
   letter-spacing: 0;
 }
 
-.event-panel,
+.event-panel {
+  display: none;
+}
+
 .consulta-panel {
   align-self: start;
 }
@@ -143,25 +146,41 @@ textarea {
   border-top: 5px solid var(--brand);
 }
 
-.price-highlight {
+.checkout-summary {
   display: grid;
-  gap: 3px;
-  margin: 4px 0 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 2px 0 18px;
+}
+
+.checkout-summary div {
+  display: grid;
+  gap: 4px;
   border-radius: 8px;
   background: #111111;
   color: white;
-  padding: 16px;
+  padding: 14px;
   box-shadow: var(--soft-shadow);
 }
 
-.price-highlight span {
+.checkout-summary div:last-child {
+  background: #f8fafc;
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
+.checkout-summary span {
   color: #d7d7d7;
   font-weight: 800;
   font-size: 0.86rem;
 }
 
-.price-highlight strong {
-  font-size: 2rem;
+.checkout-summary div:last-child span {
+  color: var(--muted);
+}
+
+.checkout-summary strong {
+  font-size: 1.5rem;
   line-height: 1;
 }
 
@@ -322,11 +341,14 @@ textarea:focus {
   color: var(--error);
 }
 
-.pix-panel,
-.consulta-panel {
+.pix-panel {
   grid-column: span 2;
   width: min(720px, 100%);
   justify-self: center;
+}
+
+.consulta-panel {
+  border-top: 5px solid #111111;
 }
 
 .pix-qrcode {
@@ -471,10 +493,6 @@ textarea:focus {
     order: 1;
   }
 
-  .event-panel {
-    order: 2;
-  }
-
   .pix-panel,
   .consulta-panel {
     grid-column: span 1;
@@ -482,11 +500,11 @@ textarea:focus {
   }
 
   .pix-panel {
-    order: 3;
+    order: 2;
   }
 
   .consulta-panel {
-    order: 4;
+    order: 3;
   }
 
   .event-list div,
@@ -500,12 +518,12 @@ textarea:focus {
     text-align: left;
   }
 
-  .price-highlight {
-    padding: 14px;
+  .checkout-summary {
+    grid-template-columns: 1fr;
   }
 
-  .price-highlight strong {
-    font-size: 1.75rem;
+  .checkout-summary strong {
+    font-size: 1.45rem;
   }
 
   input,

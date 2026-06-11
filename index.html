@@ -30,38 +30,20 @@
     </header>
 
     <main class="container main-grid">
-      <section class="panel event-panel" aria-labelledby="evento-titulo">
-        <span class="section-kicker">Evento</span>
-        <h2 id="evento-titulo">Panqueca UMEC</h2>
-
-        <div class="price-highlight">
-          <span>Valor unitário</span>
-          <strong data-valor-unitario>R$ 12,00</strong>
-        </div>
-
-        <dl class="event-list">
-          <div>
-            <dt>Nome</dt>
-            <dd data-evento-nome>Refeição UMEC</dd>
-          </div>
-          <div>
-            <dt>Data</dt>
-            <dd data-evento-data>A definir</dd>
-          </div>
-          <div>
-            <dt>Local</dt>
-            <dd data-evento-local>UMEC Tancredo Neves</dd>
-          </div>
-          <div>
-            <dt>Horário</dt>
-            <dd data-evento-horario>A definir</dd>
-          </div>
-        </dl>
-      </section>
-
       <section class="panel form-panel" aria-labelledby="compra-titulo">
         <span class="section-kicker">Comprar</span>
         <h2 id="compra-titulo">Comprar panquecas</h2>
+
+        <div class="checkout-summary">
+          <div>
+            <span>Valor unitário</span>
+            <strong data-valor-unitario>R$ 12,00</strong>
+          </div>
+          <div>
+            <span>Entrega</span>
+            <strong>PDF</strong>
+          </div>
+        </div>
 
         <form id="compra-form" class="form-stack">
           <label>
@@ -128,7 +110,7 @@
           </div>
         </div>
 
-        <div class="button-row payment-actions">
+        <div id="pix-payment-actions" class="button-row payment-actions">
           <button class="secondary-button" id="verificar-pagamento" type="button">Verificar pagamento</button>
           <button class="ghost-button" id="fechar-pix" type="button">Fechar tela Pix</button>
         </div>
@@ -163,19 +145,19 @@
         <div id="consulta-resultado" class="consulta-resultado hidden">
           <dl>
             <div>
-              <dt>Status</dt>
+              <dt id="resultado-status-label">Status</dt>
               <dd id="resultado-status"></dd>
             </div>
             <div>
-              <dt>Quantidade</dt>
+              <dt id="resultado-quantidade-label">Quantidade</dt>
               <dd id="resultado-quantidade"></dd>
             </div>
             <div>
-              <dt>Valor total</dt>
+              <dt id="resultado-total-label">Valor total</dt>
               <dd id="resultado-total"></dd>
             </div>
             <div>
-              <dt>Criada em</dt>
+              <dt id="resultado-data-label">Criada em</dt>
               <dd id="resultado-data"></dd>
             </div>
           </dl>

@@ -12,6 +12,14 @@ type ConsultaPayload = {
   whatsapp?: string;
 };
 
+type CompraConsulta = {
+  status_pagamento: string;
+  quantidade: number;
+  valor_total: number | string;
+  created_at: string;
+  pdf_path: string | null;
+};
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -42,6 +50,22 @@ function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
 }
 
+async function createDownloadUrl(
+  supabase: ReturnType<typeof createClient>,
+  pdfPath: string,
+) {
+  const { data: signed, error } = await supabase.storage
+    .from("senhas-pdf")
+    .createSignedUrl(pdfPath, 60 * 15, { download: true });
+
+  if (error) {
+    console.error("Erro ao gerar URL assinada", error);
+    throw new Error("Não foi possível gerar o link de download.");
+  }
+
+  return signed.signedUrl;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
@@ -64,50 +88,77 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    if (codigoCompra) {
+      const { data: compra, error } = await supabase
+        .from("compras")
+        .select("status_pagamento,quantidade,valor_total,created_at,pdf_path")
+        .eq("codigo_compra", codigoCompra)
+        .maybeSingle<CompraConsulta>();
+
+      if (error) {
+        console.error("Erro ao consultar compra", error);
+        return json({ error: "Não foi possível consultar a compra." }, 500);
+      }
+
+      if (!compra) return json({ error: "Compra não encontrada." }, 404);
+
+      const response: Record<string, unknown> = {
+        tipo_consulta: "compra",
+        status_pagamento: compra.status_pagamento,
+        quantidade: compra.quantidade,
+        valor_total: compra.valor_total,
+        created_at: compra.created_at,
+      };
+
+      if (compra.status_pagamento === "pago" && compra.pdf_path) {
+        response.download_url = await createDownloadUrl(supabase, compra.pdf_path);
+      }
+
+      return json(response);
+    }
+
     let query = supabase
       .from("compras")
       .select("status_pagamento,quantidade,valor_total,created_at,pdf_path")
-      .order("created_at", { ascending: false })
-      .limit(1);
+      .order("created_at", { ascending: false });
 
-    if (codigoCompra) {
-      query = query.eq("codigo_compra", codigoCompra);
-    } else if (email) {
+    if (email) {
       query = query.eq("email", email);
     } else {
       query = query.eq("whatsapp", whatsapp);
     }
 
-    const { data: compra, error } = await query.maybeSingle();
+    const { data: compras, error } = await query;
 
     if (error) {
-      console.error("Erro ao consultar compra", error);
-      return json({ error: "Não foi possível consultar a compra." }, 500);
+      console.error("Erro ao consultar compras do cliente", error);
+      return json({ error: "Não foi possível consultar as compras." }, 500);
     }
 
-    if (!compra) return json({ error: "Compra não encontrada." }, 404);
+    if (!compras?.length) return json({ error: "Compra não encontrada." }, 404);
 
-    const response: Record<string, unknown> = {
-      status_pagamento: compra.status_pagamento,
-      quantidade: compra.quantidade,
-      valor_total: compra.valor_total,
-      created_at: compra.created_at,
-    };
+    const comprasPagas = (compras as CompraConsulta[]).filter(
+      (compra) => compra.status_pagamento === "pago",
+    );
+    const quantidadeTotalPaga = comprasPagas.reduce(
+      (total, compra) => total + Number(compra.quantidade ?? 0),
+      0,
+    );
+    const valorTotalPago = comprasPagas.reduce(
+      (total, compra) => total + Number(compra.valor_total ?? 0),
+      0,
+    );
 
-    if (compra.status_pagamento === "pago" && compra.pdf_path) {
-      const { data: signed, error: signedError } = await supabase.storage
-        .from("senhas-pdf")
-        .createSignedUrl(compra.pdf_path, 60 * 15, { download: true });
-
-      if (signedError) {
-        console.error("Erro ao gerar URL assinada", signedError);
-        return json({ error: "Não foi possível gerar o link de download." }, 500);
-      }
-
-      response.download_url = signed.signedUrl;
-    }
-
-    return json(response);
+    return json({
+      tipo_consulta: "resumo_cliente",
+      status_pagamento: quantidadeTotalPaga > 0 ? "pago" : "sem_pagamento_pago",
+      quantidade_total_paga: quantidadeTotalPaga,
+      valor_total_pago: Number(valorTotalPago.toFixed(2)),
+      compras_pagas: comprasPagas.length,
+      compras_encontradas: compras.length,
+      created_at_ultima_compra_paga: comprasPagas[0]?.created_at ?? null,
+    });
   } catch (error) {
     console.error(error);
     const message = error instanceof Error ? error.message : "Erro inesperado.";
