@@ -1,6 +1,6 @@
 :root {
   color-scheme: light;
-  --bg: #f6f7f9;
+  --bg: #f3f5f8;
   --surface: #ffffff;
   --surface-strong: #111111;
   --text: #171717;
@@ -8,9 +8,11 @@
   --line: #e3e6eb;
   --brand: #d9161f;
   --brand-dark: #a80d15;
+  --accent: #f3b23c;
   --ok: #0f7a49;
   --error: #b42318;
-  --shadow: 0 20px 50px rgba(16, 24, 40, 0.12);
+  --shadow: 0 16px 38px rgba(16, 24, 40, 0.1);
+  --soft-shadow: 0 8px 22px rgba(16, 24, 40, 0.08);
 }
 
 * {
@@ -20,7 +22,9 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--bg);
+  background:
+    linear-gradient(180deg, #ffffff 0, var(--bg) 300px),
+    var(--bg);
   color: var(--text);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -32,29 +36,30 @@ textarea {
 }
 
 .container {
-  width: min(1120px, calc(100% - 32px));
+  width: min(1120px, calc(100% - 28px));
   margin: 0 auto;
 }
 
 .site-header {
   background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.88), rgba(24, 24, 24, 0.8)),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.92), rgba(26, 24, 24, 0.84)),
     url("assets/logo-umec.png") center right / contain no-repeat,
     #111;
   color: white;
-  padding: 38px 0;
+  padding: 30px 0 46px;
+  border-bottom: 5px solid var(--brand);
 }
 
 .header-grid {
   display: grid;
-  grid-template-columns: 150px 1fr;
-  gap: 28px;
+  grid-template-columns: 124px minmax(0, 1fr);
+  gap: 24px;
   align-items: center;
 }
 
 .brand-logo {
-  width: 150px;
-  height: 150px;
+  width: 124px;
+  height: 124px;
   object-fit: cover;
   border-radius: 8px;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
@@ -87,11 +92,32 @@ textarea {
   line-height: 1.6;
 }
 
+.header-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.header-pills span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  padding: 7px 12px;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
 .main-grid {
   display: grid;
   grid-template-columns: 0.92fr 1.08fr;
   gap: 22px;
-  padding: 26px 0 44px;
+  padding: 28px 0 44px;
+  margin-top: -34px;
 }
 
 .panel {
@@ -99,7 +125,7 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: var(--shadow);
-  padding: 24px;
+  padding: 22px;
 }
 
 .panel h2 {
@@ -113,10 +139,36 @@ textarea {
   align-self: start;
 }
 
+.form-panel {
+  border-top: 5px solid var(--brand);
+}
+
+.price-highlight {
+  display: grid;
+  gap: 3px;
+  margin: 4px 0 16px;
+  border-radius: 8px;
+  background: #111111;
+  color: white;
+  padding: 16px;
+  box-shadow: var(--soft-shadow);
+}
+
+.price-highlight span {
+  color: #d7d7d7;
+  font-weight: 800;
+  font-size: 0.86rem;
+}
+
+.price-highlight strong {
+  font-size: 2rem;
+  line-height: 1;
+}
+
 .event-list,
 .consulta-resultado dl {
   display: grid;
-  gap: 12px;
+  gap: 0;
   margin: 0;
 }
 
@@ -161,7 +213,8 @@ textarea {
   border-radius: 8px;
   background: white;
   color: var(--text);
-  padding: 12px 13px;
+  min-height: 50px;
+  padding: 13px 14px;
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -180,11 +233,13 @@ textarea:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 58px;
-  background: #111;
+  min-height: 64px;
+  background:
+    linear-gradient(90deg, #111111, #222222);
   color: white;
   border-radius: 8px;
-  padding: 14px 16px;
+  padding: 15px 16px;
+  box-shadow: var(--soft-shadow);
 }
 
 .total-box span {
@@ -204,7 +259,7 @@ textarea:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
+  min-height: 52px;
   border: 0;
   border-radius: 8px;
   padding: 12px 16px;
@@ -216,7 +271,7 @@ textarea:focus {
 
 .primary-button,
 .download-button {
-  background: var(--brand);
+  background: linear-gradient(180deg, #ed1823, var(--brand-dark));
   color: white;
 }
 
@@ -256,6 +311,7 @@ textarea:focus {
   margin: 0;
   color: var(--muted);
   font-weight: 700;
+  line-height: 1.4;
 }
 
 .message.success {
@@ -269,6 +325,8 @@ textarea:focus {
 .pix-panel,
 .consulta-panel {
   grid-column: span 2;
+  width: min(720px, 100%);
+  justify-self: center;
 }
 
 .pix-qrcode {
@@ -290,7 +348,7 @@ textarea:focus {
   border: 1px solid #d7dde7;
   border-radius: 8px;
   background: #f8fafc;
-  padding: 14px 16px;
+  padding: 15px 16px;
 }
 
 .payment-status strong {
@@ -352,10 +410,10 @@ textarea:focus {
 
 @media (max-width: 760px) {
   .site-header {
-    padding: 24px 0;
+    padding: 18px 0 54px;
     background:
-      linear-gradient(180deg, rgba(0, 0, 0, 0.92), rgba(24, 24, 24, 0.86)),
-      url("assets/logo-umec.png") center top / cover no-repeat,
+      linear-gradient(180deg, rgba(0, 0, 0, 0.94), rgba(22, 22, 22, 0.9)),
+      url("assets/logo-umec.png") right top / 280px auto no-repeat,
       #111;
   }
 
@@ -365,14 +423,70 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 
+  .header-grid {
+    gap: 14px;
+  }
+
   .brand-logo {
-    width: 112px;
-    height: 112px;
+    width: 88px;
+    height: 88px;
+  }
+
+  .header-copy h1 {
+    font-size: clamp(2rem, 13vw, 3.2rem);
+  }
+
+  .header-copy p {
+    font-size: 0.96rem;
+    line-height: 1.45;
+  }
+
+  .header-pills {
+    gap: 6px;
+  }
+
+  .header-pills span {
+    min-height: 30px;
+    font-size: 0.78rem;
+    padding: 6px 10px;
+  }
+
+  .main-grid {
+    gap: 16px;
+    margin-top: -38px;
+    padding-bottom: 28px;
+  }
+
+  .panel {
+    padding: 18px;
+    border-radius: 8px;
+  }
+
+  .panel h2 {
+    font-size: 1.25rem;
+    margin-bottom: 16px;
+  }
+
+  .form-panel {
+    order: 1;
+  }
+
+  .event-panel {
+    order: 2;
   }
 
   .pix-panel,
   .consulta-panel {
     grid-column: span 1;
+    width: 100%;
+  }
+
+  .pix-panel {
+    order: 3;
+  }
+
+  .consulta-panel {
+    order: 4;
   }
 
   .event-list div,
@@ -384,5 +498,27 @@ textarea:focus {
 
   dd {
     text-align: left;
+  }
+
+  .price-highlight {
+    padding: 14px;
+  }
+
+  .price-highlight strong {
+    font-size: 1.75rem;
+  }
+
+  input,
+  textarea,
+  .primary-button,
+  .secondary-button,
+  .whatsapp-button,
+  .download-button,
+  .ghost-button {
+    min-height: 54px;
+  }
+
+  .total-box strong {
+    font-size: 1.5rem;
   }
 }

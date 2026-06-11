@@ -3,7 +3,7 @@ const CONFIG = {
   SUPABASE_ANON_KEY: "sb_publishable_VSpoG2aPN10R7dYTA2S1gw_w20uEdVJ",
   WHATSAPP_UMEC: "5583998465279",
   VALOR_UNITARIO: 12.0,
-  EVENTO_NOME: "Refeição UMEC",
+  EVENTO_NOME: "Panqueca UMEC",
   EVENTO_DATA: "A definir",
   EVENTO_LOCAL: "UMEC Tancredo Neves",
   EVENTO_HORARIO: "A definir",
@@ -36,7 +36,7 @@ let paymentPollTimer = null;
 let paymentPollDeadline = 0;
 
 const PAYMENT_POLL_INTERVAL_MS = 10000;
-const PAYMENT_POLL_TIMEOUT_MS = 30 * 60 * 1000;
+const PAYMENT_POLL_TIMEOUT_MS = 15 * 60 * 1000;
 
 function setEventoInfo() {
   document.querySelector("[data-evento-nome]").textContent = CONFIG.EVENTO_NOME;
@@ -115,7 +115,7 @@ async function callFunction(name, payload) {
 
 function buildWhatsAppUrl(compra) {
   const message = [
-    `Olá, realizei a compra de ${compra.quantidade} senha(s) para a refeição da UMEC.`,
+    `Olá, realizei a compra de ${compra.quantidade} panqueca(s) da UMEC.`,
     "",
     `Nome: ${compra.nome}`,
     `E-mail: ${compra.email}`,
@@ -139,7 +139,7 @@ function showPix(data, formData) {
   pixDownloadPdf.classList.add("hidden");
   pixDownloadPdf.removeAttribute("href");
   pixPaymentDetails.classList.remove("hidden");
-  setPixStatus("pending", "Aguardando pagamento", "Depois que o Pix for pago, a confirmação aparece aqui automaticamente.");
+  setPixStatus("pending", "Aguardando pagamento", "Depois que o Pix for pago, a confirmação aparece aqui automaticamente por até 15 minutos.");
 
   pixArea.classList.remove("hidden");
   pixArea.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -184,7 +184,7 @@ function startPaymentWatcher() {
   paymentPollTimer = setInterval(async () => {
     if (Date.now() > paymentPollDeadline) {
       stopPaymentWatcher();
-      setPixStatus("pending", "Aguardando pagamento", "Não recebemos a confirmação ainda. Use Consultar Compra para verificar depois.");
+      setPixStatus("pending", "Aguardando pagamento", "O acompanhamento automático terminou. Use Consultar Compra para verificar depois.");
       return;
     }
 
@@ -218,7 +218,7 @@ compraForm.addEventListener("submit", async (event) => {
   try {
     const data = await callFunction("criar-pagamento", formData);
     showPix(data, formData);
-    setMessage(compraMsg, "Pix gerado com sucesso. A confirmação será automática após o pagamento.", "success");
+    setMessage(compraMsg, "Pix gerado com sucesso. A confirmação será acompanhada por até 15 minutos.", "success");
   } catch (error) {
     setMessage(compraMsg, error.message, "error");
   } finally {
@@ -257,7 +257,7 @@ byId("verificar-pagamento").addEventListener("click", async () => {
 
 byId("fechar-pix").addEventListener("click", () => {
   pixPaymentDetails.classList.add("hidden");
-  setPixStatus("pending", "Acompanhando pagamento", "Você pode continuar nesta tela. Quando o pagamento for confirmado, o botão do PDF aparece aqui.");
+  setPixStatus("pending", "Acompanhando pagamento", "Quando o pagamento for confirmado, o botão do PDF aparece aqui.");
   pixArea.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 

@@ -17,9 +17,14 @@
       <div class="container header-grid">
         <img src="assets/logo-umec.png" alt="UMEC Tancredo Neves" class="brand-logo" />
         <div class="header-copy">
-          <span class="eyebrow">Venda online de senhas</span>
-          <h1>Refeição UMEC</h1>
-          <p>Gere seu Pix, aguarde a confirmação automática e receba suas senhas em PDF.</p>
+          <span class="eyebrow">Panqueca UMEC</span>
+          <h1>Garanta sua ficha</h1>
+          <p>Compra por Pix com confirmação automática e ficha em PDF.</p>
+          <div class="header-pills" aria-label="Resumo da compra">
+            <span>R$ 12,00 cada</span>
+            <span>Pix</span>
+            <span>PDF após pagamento</span>
+          </div>
         </div>
       </div>
     </header>
@@ -27,7 +32,12 @@
     <main class="container main-grid">
       <section class="panel event-panel" aria-labelledby="evento-titulo">
         <span class="section-kicker">Evento</span>
-        <h2 id="evento-titulo">Informações da refeição</h2>
+        <h2 id="evento-titulo">Panqueca UMEC</h2>
+
+        <div class="price-highlight">
+          <span>Valor unitário</span>
+          <strong data-valor-unitario>R$ 12,00</strong>
+        </div>
 
         <dl class="event-list">
           <div>
@@ -46,16 +56,12 @@
             <dt>Horário</dt>
             <dd data-evento-horario>A definir</dd>
           </div>
-          <div>
-            <dt>Valor unitário</dt>
-            <dd data-valor-unitario>R$ 10,00</dd>
-          </div>
         </dl>
       </section>
 
       <section class="panel form-panel" aria-labelledby="compra-titulo">
         <span class="section-kicker">Comprar</span>
-        <h2 id="compra-titulo">Gerar Pix</h2>
+        <h2 id="compra-titulo">Comprar panquecas</h2>
 
         <form id="compra-form" class="form-stack">
           <label>
@@ -74,13 +80,13 @@
           </label>
 
           <label>
-            Quantidade de senhas
+            Quantidade de panquecas
             <input id="quantidade" name="quantidade" type="number" min="1" max="50" value="1" required />
           </label>
 
           <div class="total-box" aria-live="polite">
             <span>Total</span>
-            <strong id="valor-total">R$ 10,00</strong>
+            <strong id="valor-total">R$ 12,00</strong>
           </div>
 
           <button class="primary-button" id="gerar-pix" type="submit">Gerar Pix</button>
@@ -99,7 +105,7 @@
 
         <div id="pix-status" class="payment-status pending" aria-live="polite">
           <strong id="pix-status-title">Aguardando pagamento</strong>
-          <span id="pix-status-text">Depois que o Pix for pago, a confirmação aparece aqui automaticamente.</span>
+          <span id="pix-status-text">Depois que o Pix for pago, a confirmação aparece aqui automaticamente por até 15 minutos.</span>
         </div>
 
         <a id="pix-download-pdf" class="download-button hidden" href="#" download>
