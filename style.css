@@ -50,6 +50,7 @@ textarea {
 }
 
 .header-grid {
+  position: relative;
   display: grid;
   grid-template-columns: 124px minmax(0, 1fr) auto;
   gap: 24px;
@@ -660,6 +661,7 @@ textarea:focus {
 
   .header-grid {
     gap: 14px;
+    padding-right: 58px;
   }
 
   .brand-logo {
@@ -687,11 +689,21 @@ textarea:focus {
   }
 
   .header-menu {
-    justify-self: start;
+    position: absolute;
+    top: 0;
+    right: 0;
+    justify-self: end;
   }
 
   .menu-button {
-    min-height: 38px;
+    width: 44px;
+    min-height: 42px;
+  }
+
+  .menu-dropdown {
+    right: 0;
+    min-width: 172px;
+    max-width: calc(100vw - 28px);
   }
 
   .main-grid,
