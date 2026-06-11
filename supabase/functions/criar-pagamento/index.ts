@@ -13,6 +13,9 @@ type CompraPayload = {
   quantidade?: number;
 };
 
+const SOLD_OUT_MESSAGE =
+  "Infelizmente todas as fichas foram vendidas, caso seja liberado mais fichas informamos nas redes sociais.";
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -107,8 +110,12 @@ async function assertEstoqueDisponivel(
   );
   const disponivel = estoqueTotal - quantidadeReservada;
 
+  if (disponivel <= 0) {
+    throw new Error(SOLD_OUT_MESSAGE);
+  }
+
   if (quantidadeSolicitada > disponivel) {
-    throw new Error(`Restam apenas ${Math.max(disponivel, 0)} panqueca(s) disponíveis.`);
+    throw new Error(`Restam apenas ${disponivel} ficha(s) disponíveis.`);
   }
 }
 
