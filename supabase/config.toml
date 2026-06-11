@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.webhook-mercadopago]
 verify_jwt = false
+
+[functions.admin-pedidos]
+verify_jwt = false

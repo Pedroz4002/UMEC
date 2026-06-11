@@ -26,6 +26,7 @@
             <span>PDF após pagamento</span>
           </div>
         </div>
+        <button class="admin-toggle" id="admin-open" type="button">Admin</button>
       </div>
     </header>
 
@@ -164,6 +165,57 @@
           <a id="baixar-pdf" class="download-button hidden" href="#" download>
             Baixar minhas senhas em PDF
           </a>
+        </div>
+      </section>
+
+      <section id="admin-panel" class="panel admin-panel hidden" aria-labelledby="admin-titulo">
+        <div class="admin-heading">
+          <div>
+            <span class="section-kicker">Admin</span>
+            <h2 id="admin-titulo">Pedidos UMEC</h2>
+          </div>
+          <button class="ghost-button compact-button" id="admin-close" type="button">Fechar</button>
+        </div>
+
+        <form id="admin-login-form" class="admin-login form-stack">
+          <label>
+            Usuário
+            <input id="admin-usuario" type="text" autocomplete="username" />
+          </label>
+          <label>
+            Senha
+            <input id="admin-senha" type="password" autocomplete="current-password" />
+          </label>
+          <button class="primary-button" id="admin-login" type="submit">Entrar</button>
+          <p id="admin-mensagem" class="message" role="status"></p>
+        </form>
+
+        <div id="admin-content" class="admin-content hidden">
+          <div class="admin-actions">
+            <div>
+              <strong id="admin-resumo">0 pedidos</strong>
+              <span>Pedidos em ordem de criação</span>
+            </div>
+            <button class="secondary-button compact-button" id="admin-refresh" type="button">Atualizar</button>
+            <button class="primary-button compact-button" id="admin-pdf" type="button">Baixar PDF geral</button>
+          </div>
+
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Pedido</th>
+                  <th>Nome</th>
+                  <th>Contato</th>
+                  <th>Status</th>
+                  <th>Fichas</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="admin-pedidos-body"></tbody>
+            </table>
+          </div>
         </div>
       </section>
     </main>
