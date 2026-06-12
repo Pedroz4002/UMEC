@@ -112,6 +112,18 @@ textarea {
   font-weight: 800;
 }
 
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.header-whatsapp {
+  min-height: 44px;
+  padding-inline: 18px;
+}
+
 .header-menu {
   position: relative;
   align-self: start;
