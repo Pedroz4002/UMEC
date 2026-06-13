@@ -3,6 +3,7 @@ const CONFIG = {
   SUPABASE_ANON_KEY: "sb_publishable_VSpoG2aPN10R7dYTA2S1gw_w20uEdVJ",
   WHATSAPP_UMEC: "5583998465279",
   VALOR_UNITARIO: 10.0,
+  TAXA_ENTREGA: 2.0,
   EVENTO_NOME: "Panqueca UMEC",
   EVENTO_DATA: "A definir",
   EVENTO_LOCAL: "UMEC Tancredo Neves",
@@ -19,7 +20,16 @@ const byId = (id) => document.getElementById(id);
 const compraForm = byId("compra-form");
 const consultaForm = byId("consulta-form");
 const quantidadeInput = byId("quantidade");
+const entregaInput = byId("entrega");
+const entregaBox = byId("entrega-box");
+const entregaRuaInput = byId("entrega-rua");
+const entregaNumeroInput = byId("entrega-numero");
+const entregaBairroInput = byId("entrega-bairro");
+const entregaTelefonePreview = byId("entrega-telefone-preview");
 const totalEl = byId("valor-total");
+const subtotalPanquecasEl = byId("subtotal-panquecas");
+const taxaEntregaEl = byId("taxa-entrega");
+const taxaEntregaLinha = byId("taxa-entrega-linha");
 const compraMsg = byId("compra-mensagem");
 const consultaMsg = byId("consulta-mensagem");
 const pixArea = byId("pix-area");
@@ -60,7 +70,13 @@ function setEventoInfo() {
 
 function updateTotal() {
   const quantidade = Math.max(Number(quantidadeInput.value || 1), 1);
-  totalEl.textContent = money.format(quantidade * CONFIG.VALOR_UNITARIO);
+  const subtotal = quantidade * CONFIG.VALOR_UNITARIO;
+  const taxaEntrega = entregaInput.checked ? CONFIG.TAXA_ENTREGA : 0;
+
+  subtotalPanquecasEl.textContent = money.format(subtotal);
+  taxaEntregaEl.textContent = money.format(CONFIG.TAXA_ENTREGA);
+  taxaEntregaLinha.classList.toggle("hidden", !entregaInput.checked);
+  totalEl.textContent = money.format(subtotal + taxaEntrega);
 }
 
 function setMessage(element, text, type = "") {
@@ -97,6 +113,39 @@ function onlyDigits(value) {
   return String(value || "").replace(/\D/g, "");
 }
 
+function formatPhonePreview(value) {
+  const digits = onlyDigits(value);
+  if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return digits || "Informe o WhatsApp acima";
+}
+
+function getEnderecoEntrega() {
+  return {
+    rua: entregaRuaInput.value.trim(),
+    numero: entregaNumeroInput.value.trim(),
+    bairro: entregaBairroInput.value.trim(),
+  };
+}
+
+function formatEnderecoEntrega(data) {
+  if (!data?.entrega) return "-";
+  const rua = data.endereco_rua || data.entrega_rua || "";
+  const numero = data.endereco_numero || data.entrega_numero || "";
+  const bairro = data.endereco_bairro || data.entrega_bairro || "";
+  return [rua, numero ? `nº ${numero}` : "", bairro].filter(Boolean).join(", ") || "-";
+}
+
+function updateEntregaState() {
+  const entregaAtiva = entregaInput.checked;
+  entregaBox.classList.toggle("hidden", !entregaAtiva);
+  entregaRuaInput.required = entregaAtiva;
+  entregaNumeroInput.required = entregaAtiva;
+  entregaBairroInput.required = entregaAtiva;
+  entregaTelefonePreview.textContent = formatPhonePreview(byId("whatsapp").value);
+  updateTotal();
+}
+
 function validateFrontendConfig() {
   if (CONFIG.SUPABASE_URL.includes("SEU-PROJETO") || CONFIG.SUPABASE_ANON_KEY.includes("SUA_")) {
     throw new Error("Configure SUPABASE_URL e SUPABASE_ANON_KEY no arquivo script.js antes de publicar.");
@@ -125,12 +174,14 @@ async function callFunction(name, payload) {
 }
 
 function buildWhatsAppUrl(compra) {
+  const entregaTexto = compra.entrega ? `Entrega: Sim - ${formatEnderecoEntrega(compra)}` : "Entrega: Nao";
   const message = [
     `Olá, realizei a compra de ${compra.quantidade} panqueca(s) da UMEC.`,
     "",
     `Nome: ${compra.nome}`,
     `E-mail: ${compra.email}`,
     `WhatsApp: ${compra.whatsapp}`,
+    entregaTexto,
     `Código da compra: ${compra.codigo_compra}`,
     "",
     "Segue o comprovante do pagamento.",
@@ -232,10 +283,17 @@ compraForm.addEventListener("submit", async (event) => {
     whatsapp: onlyDigits(byId("whatsapp").value),
     email: byId("email").value.trim().toLowerCase(),
     quantidade: Number(quantidadeInput.value),
+    entrega: entregaInput.checked,
+    endereco_entrega: getEnderecoEntrega(),
   };
 
   if (!formData.nome || !formData.whatsapp || !formData.email || formData.quantidade < 1) {
     setMessage(compraMsg, "Preencha todos os campos corretamente.", "error");
+    return;
+  }
+
+  if (formData.entrega && (!formData.endereco_entrega.rua || !formData.endereco_entrega.numero || !formData.endereco_entrega.bairro)) {
+    setMessage(compraMsg, "Informe rua, nÃºmero e bairro para entrega.", "error");
     return;
   }
 
@@ -324,6 +382,9 @@ consultaForm.addEventListener("submit", async (event) => {
       byId("resultado-total").textContent = money.format(Number(data.valor_total_pago || 0));
       byId("resultado-data").textContent = `${data.compras_pagas || 0} compra(s)`;
 
+      byId("resultado-entrega-row").classList.add("hidden");
+      byId("resultado-endereco-row").classList.add("hidden");
+
       consultaResultado.classList.remove("hidden");
       setMessage(
         consultaMsg,
@@ -345,6 +406,10 @@ consultaForm.addEventListener("submit", async (event) => {
     byId("resultado-status").textContent = isPago ? "Pagamento confirmado" : "Pagamento ainda não confirmado";
     byId("resultado-quantidade").textContent = data.quantidade || "-";
     byId("resultado-total").textContent = data.valor_total ? money.format(Number(data.valor_total)) : "-";
+    byId("resultado-entrega").textContent = data.entrega ? "Sim" : "NÃ£o";
+    byId("resultado-endereco").textContent = formatEnderecoEntrega(data);
+    byId("resultado-entrega-row").classList.remove("hidden");
+    byId("resultado-endereco-row").classList.toggle("hidden", !data.entrega);
     byId("resultado-data").textContent = data.created_at
       ? new Date(data.created_at).toLocaleString("pt-BR")
       : "-";
@@ -364,5 +429,8 @@ consultaForm.addEventListener("submit", async (event) => {
 });
 
 quantidadeInput.addEventListener("input", updateTotal);
+entregaInput.addEventListener("change", updateEntregaState);
+byId("whatsapp").addEventListener("input", updateEntregaState);
 setEventoInfo();
+updateEntregaState();
 setWhatsappContato();

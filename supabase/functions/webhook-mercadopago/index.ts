@@ -13,6 +13,11 @@ type Compra = {
   whatsapp: string;
   quantidade: number;
   valor_total: number;
+  entrega: boolean;
+  taxa_entrega: number;
+  endereco_rua: string | null;
+  endereco_numero: string | null;
+  endereco_bairro: string | null;
   status_pagamento: string;
   pdf_path: string | null;
   codigo_compra: string;
@@ -111,6 +116,15 @@ function arrayBufferToBase64(buffer: ArrayBuffer) {
   return btoa(binary);
 }
 
+function formatEndereco(compra: Compra) {
+  if (!compra.entrega) return "Retirada na UMEC";
+  return [
+    compra.endereco_rua,
+    compra.endereco_numero ? `nº ${compra.endereco_numero}` : "",
+    compra.endereco_bairro,
+  ].filter(Boolean).join(", ") || "Endereço não informado";
+}
+
 async function sendResendEmail(resendApiKey: string, payload: Record<string, unknown>) {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -161,6 +175,8 @@ async function enviarEmailComPdf(supabase: ReturnType<typeof createClient>, comp
     `WhatsApp: ${compra.whatsapp}`,
     `Código da compra: ${compra.codigo_compra}`,
     `Quantidade de fichas: ${compra.quantidade}`,
+    `Entrega: ${compra.entrega ? "Sim" : "Não"}`,
+    `Endereço: ${formatEndereco(compra)}`,
     `Valor total: ${valorTotal}`,
     "",
     "O PDF da ficha está em anexo para conferência.",

@@ -22,6 +22,7 @@
           <p>Compra por Pix com confirmação automática e ficha em PDF.</p>
           <div class="header-pills" aria-label="Resumo da compra">
             <span>R$ 10,00 cada</span>
+            <span>Entrega + R$ 2,00</span>
             <span>Pix</span>
             <span>PDF após pagamento</span>
           </div>
@@ -47,7 +48,7 @@
           </div>
           <div>
             <span>Entrega</span>
-            <strong>PDF</strong>
+            <strong>Opcional</strong>
           </div>
         </div>
 
@@ -71,6 +72,43 @@
             Quantidade de panquecas
             <input id="quantidade" name="quantidade" type="number" min="1" max="50" value="1" required />
           </label>
+
+          <label class="delivery-toggle">
+            <input id="entrega" name="entrega" type="checkbox" />
+            <span>
+              <strong>Entregue</strong>
+              <small>Adicionar entrega por R$ 2,00 neste pedido</small>
+            </span>
+          </label>
+
+          <div id="entrega-box" class="delivery-box hidden">
+            <div class="delivery-contact">
+              <span>Contato da entrega</span>
+              <strong id="entrega-telefone-preview">Informe o WhatsApp acima</strong>
+            </div>
+
+            <label>
+              Rua
+              <input id="entrega-rua" name="entrega_rua" type="text" autocomplete="street-address" />
+            </label>
+
+            <div class="delivery-grid">
+              <label>
+                NÃºmero
+                <input id="entrega-numero" name="entrega_numero" type="text" inputmode="numeric" />
+              </label>
+
+              <label>
+                Bairro
+                <input id="entrega-bairro" name="entrega_bairro" type="text" />
+              </label>
+            </div>
+          </div>
+
+          <div class="total-breakdown" aria-live="polite">
+            <span>Panquecas: <strong id="subtotal-panquecas">R$ 10,00</strong></span>
+            <span id="taxa-entrega-linha" class="hidden">Entrega: <strong id="taxa-entrega">R$ 2,00</strong></span>
+          </div>
 
           <div class="total-box" aria-live="polite">
             <span>Total</span>
@@ -161,6 +199,14 @@
             <div>
               <dt id="resultado-total-label">Valor total</dt>
               <dd id="resultado-total"></dd>
+            </div>
+            <div id="resultado-entrega-row">
+              <dt>Entrega</dt>
+              <dd id="resultado-entrega"></dd>
+            </div>
+            <div id="resultado-endereco-row">
+              <dt>EndereÃ§o</dt>
+              <dd id="resultado-endereco"></dd>
             </div>
             <div>
               <dt id="resultado-data-label">Criada em</dt>

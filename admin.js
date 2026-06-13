@@ -51,7 +51,7 @@ async function callAdmin(action, payload = {}) {
     body: JSON.stringify({ ...adminSession, action, ...payload }),
   });
 
-  if (action === "pdf") {
+  if (action === "pdf" || action === "pdf_entregas") {
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
       throw new Error(data.error || "Não foi possível gerar o PDF geral.");
@@ -82,13 +82,18 @@ function renderAdminPedidos(data) {
   adminFichasDisponiveis.textContent = String(data.total_fichas_disponiveis ?? "-");
 
   if (!pedidos.length) {
-    adminPedidosBody.innerHTML = '<tr><td colspan="8">Nenhum pedido encontrado.</td></tr>';
+    adminPedidosBody.innerHTML = '<tr><td colspan="9">Nenhum pedido encontrado.</td></tr>';
     return;
   }
 
   adminPedidosBody.innerHTML = pedidos.map((pedido) => {
     const senhas = pedido.senhas?.length ? pedido.senhas.join(", ") : "-";
     const contato = `${escapeHtml(pedido.email)}<br>${escapeHtml(pedido.whatsapp)}`;
+    const endereco = pedido.entrega
+      ? [pedido.endereco_rua, pedido.endereco_numero ? `nÂº ${pedido.endereco_numero}` : "", pedido.endereco_bairro]
+        .filter(Boolean)
+        .join(", ")
+      : "-";
     const canCancel = pedido.status_pagamento !== "cancelado";
     const cancelButton = canCancel
       ? `<button class="danger-button compact-button" type="button" data-cancelar-pedido="${escapeHtml(pedido.codigo_compra)}">Cancelar</button>`
@@ -101,6 +106,7 @@ function renderAdminPedidos(data) {
         <td>${escapeHtml(pedido.nome)}</td>
         <td>${contato}</td>
         <td><span class="status-badge ${escapeHtml(pedido.status_pagamento)}">${escapeHtml(pedido.status_pagamento)}</span></td>
+        <td>${pedido.entrega ? `Sim<br><small>${escapeHtml(endereco)}</small>` : "NÃ£o"}</td>
         <td>${escapeHtml(senhas)}</td>
         <td>${money.format(Number(pedido.valor_total || 0))}</td>
         <td>${cancelButton}</td>
@@ -156,6 +162,28 @@ byId("admin-pdf").addEventListener("click", async () => {
     link.remove();
     URL.revokeObjectURL(url);
     setMessage(adminMsg, "PDF geral baixado.", "success");
+  } catch (error) {
+    setMessage(adminMsg, error.message, "error");
+  } finally {
+    setLoading(button, false);
+  }
+});
+
+byId("admin-pdf-entregas").addEventListener("click", async () => {
+  const button = byId("admin-pdf-entregas");
+  setLoading(button, true, "Gerando PDF...");
+
+  try {
+    const blob = await callAdmin("pdf_entregas");
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "entregas-umec.pdf";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setMessage(adminMsg, "PDF de entregas baixado.", "success");
   } catch (error) {
     setMessage(adminMsg, error.message, "error");
   } finally {

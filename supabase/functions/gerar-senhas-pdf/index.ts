@@ -14,6 +14,11 @@ type Compra = {
   whatsapp: string;
   quantidade: number;
   valor_total: number;
+  entrega: boolean;
+  taxa_entrega: number;
+  endereco_rua: string | null;
+  endereco_numero: string | null;
+  endereco_bairro: string | null;
   status_pagamento: string;
   pdf_path: string | null;
   codigo_compra: string;
@@ -70,6 +75,20 @@ function formatFicha(numero: number) {
   return String(numero).padStart(2, "0");
 }
 
+function formatEndereco(compra: Compra) {
+  if (!compra.entrega) return "Sem entrega. Retirada na UMEC.";
+  const endereco = [
+    compra.endereco_rua,
+    compra.endereco_numero ? `nº ${compra.endereco_numero}` : "",
+    compra.endereco_bairro,
+  ].filter(Boolean).join(", ");
+  return endereco || "Endereço não informado.";
+}
+
+function truncate(value: string, max = 74) {
+  return value.length > max ? `${value.slice(0, max - 3)}...` : value;
+}
+
 async function gerarPdf(compra: Compra, senhas: Senha[]) {
   const pdfDoc = await PDFDocument.create();
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -97,6 +116,9 @@ async function gerarPdf(compra: Compra, senhas: Senha[]) {
 
     page.drawText("Comprador", { x: 72, y: height - 390, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
     page.drawText(compra.nome, { x: 72, y: height - 420, size: 18, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
+    page.drawText("Entrega", { x: 72, y: height - 454, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
+    page.drawText(compra.entrega ? "Sim" : "Não", { x: 142, y: height - 454, size: 12, font: fontBold, color: compra.entrega ? rgb(0.85, 0.08, 0.11) : rgb(0.1, 0.1, 0.1) });
+    page.drawText(`Contato: ${compra.whatsapp}`, { x: 210, y: height - 454, size: 12, font, color: rgb(0.1, 0.1, 0.1) });
 
     page.drawText("Data", { x: 72, y: height - 486, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
     page.drawText(eventDate, { x: 72, y: height - 512, size: 16, font, color: rgb(0.1, 0.1, 0.1) });
@@ -108,13 +130,22 @@ async function gerarPdf(compra: Compra, senhas: Senha[]) {
     page.drawText(eventHorario, { x: 72, y: height - 664, size: 16, font, color: rgb(0.1, 0.1, 0.1) });
 
     page.drawRectangle({ x: 72, y: 108, width: width - 144, height: 58, color: rgb(0.96, 0.96, 0.96) });
-    page.drawText("Apresente esta ficha no momento da entrega.", {
+    page.drawText(compra.entrega ? "Entrega cadastrada" : "Retirada na UMEC", {
       x: 92,
-      y: 132,
+      y: compra.entrega ? 142 : 132,
       size: 14,
       font: fontBold,
       color: rgb(0.1, 0.1, 0.1),
     });
+    if (compra.entrega) {
+      page.drawText(truncate(formatEndereco(compra), 68), {
+        x: 92,
+        y: 120,
+        size: 11,
+        font,
+        color: rgb(0.1, 0.1, 0.1),
+      });
+    }
 
     page.drawText(`Código da compra: ${compra.codigo_compra}`, {
       x: 72,

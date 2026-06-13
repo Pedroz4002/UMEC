@@ -298,6 +298,71 @@ label {
   font-weight: 700;
 }
 
+.delivery-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 13px 14px;
+  cursor: pointer;
+}
+
+.delivery-toggle input {
+  width: 22px;
+  min-height: 22px;
+  margin-top: 2px;
+  accent-color: var(--brand);
+}
+
+.delivery-toggle span {
+  display: grid;
+  gap: 3px;
+}
+
+.delivery-toggle small {
+  color: var(--muted);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.delivery-box {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(217, 22, 31, 0.22);
+  border-radius: 8px;
+  background: #fff7f7;
+  padding: 14px;
+}
+
+.delivery-grid {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.45fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.delivery-contact,
+.total-breakdown {
+  display: grid;
+  gap: 4px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  padding: 12px;
+}
+
+.delivery-contact span,
+.total-breakdown span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.delivery-contact strong,
+.total-breakdown strong {
+  color: var(--text);
+}
+
 input,
 textarea {
   width: 100%;
@@ -626,7 +691,7 @@ textarea:focus {
 
 .admin-table {
   width: 100%;
-  min-width: 860px;
+  min-width: 1040px;
   border-collapse: collapse;
   font-size: 0.92rem;
 }
@@ -808,6 +873,10 @@ textarea:focus {
   }
 
   .checkout-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .delivery-grid {
     grid-template-columns: 1fr;
   }
 

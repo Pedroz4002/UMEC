@@ -10,7 +10,7 @@ const corsHeaders = {
 type AdminPayload = {
   usuario?: string;
   senha?: string;
-  action?: "list" | "pdf" | "cancel";
+  action?: "list" | "pdf" | "pdf_entregas" | "cancel";
   codigo_compra?: string;
 };
 
@@ -22,6 +22,11 @@ type Compra = {
   whatsapp: string;
   quantidade: number;
   valor_total: number | string;
+  entrega: boolean;
+  taxa_entrega: number | string;
+  endereco_rua: string | null;
+  endereco_numero: string | null;
+  endereco_bairro: string | null;
   status_pagamento: string;
   created_at: string;
 };
@@ -31,6 +36,15 @@ type Senha = {
   numero_senha: number;
   nome: string;
   whatsapp?: string;
+};
+
+type LinhaPdf = {
+  ficha: string;
+  nome: string;
+  whatsapp: string;
+  status_pagamento: string;
+  entrega: boolean;
+  endereco: string;
 };
 
 function env(name: string, fallback = "") {
@@ -94,6 +108,24 @@ function formatPhone(value: string) {
   return value || "-";
 }
 
+function formatEndereco(compra: {
+  entrega?: boolean;
+  endereco_rua?: string | null;
+  endereco_numero?: string | null;
+  endereco_bairro?: string | null;
+}) {
+  if (!compra.entrega) return "-";
+  return [
+    compra.endereco_rua,
+    compra.endereco_numero ? `nº ${compra.endereco_numero}` : "",
+    compra.endereco_bairro,
+  ].filter(Boolean).join(", ") || "-";
+}
+
+function truncate(value: string, max: number) {
+  return value.length > max ? `${value.slice(0, max - 3)}...` : value;
+}
+
 function getEstoqueTotal() {
   const estoqueTotal = Number(env("ESTOQUE_TOTAL", "50"));
   return Number.isInteger(estoqueTotal) && estoqueTotal > 0 ? estoqueTotal : 50;
@@ -102,7 +134,7 @@ function getEstoqueTotal() {
 async function getPedidos(supabase: ReturnType<typeof createClient>) {
   const { data: compras, error: comprasError } = await supabase
     .from("compras")
-    .select("id,codigo_compra,nome,email,whatsapp,quantidade,valor_total,status_pagamento,created_at")
+    .select("id,codigo_compra,nome,email,whatsapp,quantidade,valor_total,entrega,taxa_entrega,endereco_rua,endereco_numero,endereco_bairro,status_pagamento,created_at")
     .order("created_at", { ascending: false });
 
   if (comprasError) {
@@ -134,6 +166,12 @@ async function getPedidos(supabase: ReturnType<typeof createClient>) {
     whatsapp: compra.whatsapp,
     quantidade: compra.quantidade,
     valor_total: Number(compra.valor_total),
+    entrega: compra.entrega,
+    taxa_entrega: Number(compra.taxa_entrega ?? 0),
+    endereco_rua: compra.endereco_rua,
+    endereco_numero: compra.endereco_numero,
+    endereco_bairro: compra.endereco_bairro,
+    endereco_formatado: formatEndereco(compra),
     status_pagamento: compra.status_pagamento,
     created_at: compra.created_at,
     created_at_formatado: formatDate(compra.created_at),
@@ -141,10 +179,26 @@ async function getPedidos(supabase: ReturnType<typeof createClient>) {
   }));
 }
 
-async function gerarPdfGeral(supabase: ReturnType<typeof createClient>) {
+async function getLinhasPdf(supabase: ReturnType<typeof createClient>, somenteEntregas = false) {
+  const { data: compras, error: comprasError } = await supabase
+    .from("compras")
+    .select("id,nome,whatsapp,status_pagamento,entrega,endereco_rua,endereco_numero,endereco_bairro")
+    .eq("status_pagamento", "pago");
+
+  if (comprasError) {
+    console.error("Erro ao buscar compras para PDF geral", comprasError);
+    throw new Error("Nao foi possivel gerar o PDF geral.");
+  }
+
+  const comprasPorId = new Map<string, Compra>();
+  for (const compra of (compras ?? []) as Compra[]) {
+    if (somenteEntregas && !compra.entrega) continue;
+    comprasPorId.set(compra.id, compra);
+  }
+
   const { data: senhas, error } = await supabase
     .from("senhas")
-    .select("numero_senha,nome,whatsapp")
+    .select("compra_id,numero_senha,nome,whatsapp")
     .order("numero_senha", { ascending: true });
 
   if (error) {
@@ -152,6 +206,24 @@ async function gerarPdfGeral(supabase: ReturnType<typeof createClient>) {
     throw new Error("Nao foi possivel gerar o PDF geral.");
   }
 
+  return ((senhas ?? []) as Senha[])
+    .map((senha) => {
+      const compra = comprasPorId.get(senha.compra_id);
+      if (!compra) return null;
+      return {
+        ficha: formatFicha(senha.numero_senha),
+        nome: senha.nome,
+        whatsapp: formatPhone(senha.whatsapp ?? compra.whatsapp),
+        status_pagamento: compra.status_pagamento,
+        entrega: compra.entrega,
+        endereco: formatEndereco(compra),
+      };
+    })
+    .filter(Boolean) as LinhaPdf[];
+}
+
+async function gerarPdfGeral(supabase: ReturnType<typeof createClient>, somenteEntregas = false) {
+  const linhas = await getLinhasPdf(supabase, somenteEntregas);
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
@@ -160,8 +232,8 @@ async function gerarPdfGeral(supabase: ReturnType<typeof createClient>) {
   let y = 780;
 
   function header() {
-    page.drawText("UMEC - Lista Geral de Fichas", {
-      x: 50,
+    page.drawText(somenteEntregas ? "UMEC - Lista de Entregas" : "UMEC - Lista Geral de Fichas", {
+      x: 42,
       y,
       size: 18,
       font: bold,
@@ -169,38 +241,42 @@ async function gerarPdfGeral(supabase: ReturnType<typeof createClient>) {
     });
     y -= 28;
     page.drawText(`Gerado em ${new Date().toLocaleString("pt-BR")}`, {
-      x: 50,
+      x: 42,
       y,
       size: 10,
       font,
       color: rgb(0.35, 0.35, 0.35),
     });
     y -= 28;
-    page.drawText("Ficha", { x: 42, y, size: 11, font: bold });
-    page.drawText("Nome", { x: 100, y, size: 11, font: bold });
-    page.drawText("Telefone", { x: 360, y, size: 11, font: bold });
+    page.drawText("Ficha", { x: 42, y, size: 10, font: bold });
+    page.drawText("Nome", { x: 86, y, size: 10, font: bold });
+    page.drawText("Telefone", { x: 235, y, size: 10, font: bold });
+    page.drawText("Pago", { x: 350, y, size: 10, font: bold });
+    page.drawText("Entrega / Endereco", { x: 395, y, size: 10, font: bold });
     y -= 12;
-    page.drawLine({ start: { x: 42, y }, end: { x: 545, y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+    page.drawLine({ start: { x: 42, y }, end: { x: 552, y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
     y -= 18;
   }
 
   header();
 
-  for (const senha of (senhas ?? []) as Array<{ numero_senha: number; nome: string; whatsapp: string }>) {
+  for (const linha of linhas) {
     if (y < 60) {
       page = pdf.addPage([595.28, 841.89]);
       y = 780;
       header();
     }
 
-    page.drawText(formatFicha(senha.numero_senha), { x: 42, y, size: 11, font: bold });
-    page.drawText(senha.nome.slice(0, 36), { x: 100, y, size: 11, font });
-    page.drawText(formatPhone(senha.whatsapp), { x: 360, y, size: 11, font });
+    page.drawText(linha.ficha, { x: 42, y, size: 10, font: bold });
+    page.drawText(truncate(linha.nome, 24), { x: 86, y, size: 10, font });
+    page.drawText(linha.whatsapp, { x: 235, y, size: 9, font });
+    page.drawText(linha.status_pagamento === "pago" ? "Sim" : "Nao", { x: 350, y, size: 10, font: bold });
+    page.drawText(linha.entrega ? truncate(linha.endereco, 34) : "Retirada", { x: 395, y, size: 9, font });
     y -= 20;
   }
 
-  if (!senhas?.length) {
-    page.drawText("Nenhuma ficha paga foi gerada ainda.", { x: 50, y, size: 12, font });
+  if (!linhas.length) {
+    page.drawText(somenteEntregas ? "Nenhuma entrega paga foi gerada ainda." : "Nenhuma ficha paga foi gerada ainda.", { x: 50, y, size: 12, font });
   }
 
   return await pdf.save();
@@ -284,14 +360,15 @@ Deno.serve(async (req) => {
       return json({ ok: true, pedido: cancelado });
     }
 
-    if (payload.action === "pdf") {
-      const pdfBytes = await gerarPdfGeral(supabase);
+    if (payload.action === "pdf" || payload.action === "pdf_entregas") {
+      const somenteEntregas = payload.action === "pdf_entregas";
+      const pdfBytes = await gerarPdfGeral(supabase, somenteEntregas);
       return new Response(pdfBytes, {
         status: 200,
         headers: {
           ...corsHeaders,
           "Content-Type": "application/pdf",
-          "Content-Disposition": 'attachment; filename="pedidos-umec.pdf"',
+          "Content-Disposition": `attachment; filename="${somenteEntregas ? "entregas-umec.pdf" : "pedidos-umec.pdf"}"`,
         },
       });
     }

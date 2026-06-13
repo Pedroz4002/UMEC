@@ -16,6 +16,11 @@ type CompraConsulta = {
   status_pagamento: string;
   quantidade: number;
   valor_total: number | string;
+  entrega: boolean;
+  taxa_entrega: number | string;
+  endereco_rua: string | null;
+  endereco_numero: string | null;
+  endereco_bairro: string | null;
   created_at: string;
   pdf_path: string | null;
 };
@@ -92,7 +97,7 @@ Deno.serve(async (req) => {
     if (codigoCompra) {
       const { data: compra, error } = await supabase
         .from("compras")
-        .select("status_pagamento,quantidade,valor_total,created_at,pdf_path")
+        .select("status_pagamento,quantidade,valor_total,entrega,taxa_entrega,endereco_rua,endereco_numero,endereco_bairro,created_at,pdf_path")
         .eq("codigo_compra", codigoCompra)
         .maybeSingle<CompraConsulta>();
 
@@ -108,6 +113,11 @@ Deno.serve(async (req) => {
         status_pagamento: compra.status_pagamento,
         quantidade: compra.quantidade,
         valor_total: compra.valor_total,
+        entrega: compra.entrega,
+        taxa_entrega: compra.taxa_entrega,
+        endereco_rua: compra.endereco_rua,
+        endereco_numero: compra.endereco_numero,
+        endereco_bairro: compra.endereco_bairro,
         created_at: compra.created_at,
       };
 
@@ -120,7 +130,7 @@ Deno.serve(async (req) => {
 
     let query = supabase
       .from("compras")
-      .select("status_pagamento,quantidade,valor_total,created_at,pdf_path")
+      .select("status_pagamento,quantidade,valor_total,entrega,taxa_entrega,endereco_rua,endereco_numero,endereco_bairro,created_at,pdf_path")
       .order("created_at", { ascending: false });
 
     if (email) {

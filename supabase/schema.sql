@@ -15,6 +15,11 @@ create table if not exists public.compras (
   quantidade integer not null check (quantidade > 0),
   valor_unitario numeric(10, 2) not null,
   valor_total numeric(10, 2) not null,
+  entrega boolean not null default false,
+  taxa_entrega numeric(10, 2) not null default 0,
+  endereco_rua text,
+  endereco_numero text,
+  endereco_bairro text,
   status_pagamento text not null default 'pendente',
   mercado_pago_payment_id text,
   pix_qr_code text,
@@ -39,6 +44,13 @@ create table if not exists public.senhas (
   usada boolean default false,
   created_at timestamp default now()
 );
+
+alter table public.compras
+  add column if not exists entrega boolean not null default false,
+  add column if not exists taxa_entrega numeric(10, 2) not null default 0,
+  add column if not exists endereco_rua text,
+  add column if not exists endereco_numero text,
+  add column if not exists endereco_bairro text;
 
 create index if not exists idx_compras_codigo_compra on public.compras (codigo_compra);
 create index if not exists idx_compras_email on public.compras (lower(email));

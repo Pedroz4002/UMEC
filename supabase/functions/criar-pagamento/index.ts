@@ -11,6 +11,12 @@ type CompraPayload = {
   whatsapp?: string;
   email?: string;
   quantidade?: number;
+  entrega?: boolean;
+  endereco_entrega?: {
+    rua?: string;
+    numero?: string;
+    bairro?: string;
+  };
 };
 
 const SOLD_OUT_MESSAGE =
@@ -63,6 +69,10 @@ function normalizePayload(payload: CompraPayload) {
   const whatsapp = onlyDigits(String(payload.whatsapp ?? ""));
   const email = String(payload.email ?? "").trim().toLowerCase();
   const quantidade = Number(payload.quantidade);
+  const entrega = payload.entrega === true;
+  const enderecoRua = String(payload.endereco_entrega?.rua ?? "").trim();
+  const enderecoNumero = String(payload.endereco_entrega?.numero ?? "").trim();
+  const enderecoBairro = String(payload.endereco_entrega?.bairro ?? "").trim();
 
   if (nome.length < 3) throw new Error("Informe o nome completo.");
   if (!/^\d{10,14}$/.test(whatsapp)) throw new Error("Informe um WhatsApp válido.");
@@ -70,8 +80,11 @@ function normalizePayload(payload: CompraPayload) {
   if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > 50) {
     throw new Error("Informe uma quantidade entre 1 e 50.");
   }
+  if (entrega && (!enderecoRua || !enderecoNumero || !enderecoBairro)) {
+    throw new Error("Informe rua, nÃºmero e bairro para entrega.");
+  }
 
-  return { nome, whatsapp, email, quantidade };
+  return { nome, whatsapp, email, quantidade, entrega, enderecoRua, enderecoNumero, enderecoBairro };
 }
 
 function createCodigoCompra() {
@@ -128,6 +141,7 @@ Deno.serve(async (req) => {
     const serviceRoleKey = getSecretKey();
     const mercadoPagoToken = env("MERCADO_PAGO_ACCESS_TOKEN");
     const valorUnitario = Number(env("VALOR_UNITARIO", "10.00"));
+    const taxaEntregaPadrao = Number(env("TAXA_ENTREGA", "2.00"));
     const estoqueTotal = getEstoqueTotal();
     const eventoNome = env("EVENTO_NOME", "Refeição UMEC");
 
@@ -139,8 +153,13 @@ Deno.serve(async (req) => {
       return json({ error: "VALOR_UNITARIO inválido." }, 500);
     }
 
+    if (!Number.isFinite(taxaEntregaPadrao) || taxaEntregaPadrao < 0) {
+      return json({ error: "TAXA_ENTREGA invÃ¡lida." }, 500);
+    }
+
     const payload = normalizePayload(await req.json());
-    const valorTotal = Number((payload.quantidade * valorUnitario).toFixed(2));
+    const taxaEntrega = payload.entrega ? taxaEntregaPadrao : 0;
+    const valorTotal = Number(((payload.quantidade * valorUnitario) + taxaEntrega).toFixed(2));
     const codigoCompra = createCodigoCompra();
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
@@ -155,6 +174,11 @@ Deno.serve(async (req) => {
         quantidade: payload.quantidade,
         valor_unitario: valorUnitario,
         valor_total: valorTotal,
+        entrega: payload.entrega,
+        taxa_entrega: taxaEntrega,
+        endereco_rua: payload.entrega ? payload.enderecoRua : null,
+        endereco_numero: payload.entrega ? payload.enderecoNumero : null,
+        endereco_bairro: payload.entrega ? payload.enderecoBairro : null,
         status_pagamento: "pendente",
         codigo_compra: codigoCompra,
       })
@@ -169,7 +193,7 @@ Deno.serve(async (req) => {
     const { firstName, lastName } = splitName(payload.nome);
     const paymentBody = {
       transaction_amount: valorTotal,
-      description: `${eventoNome} - ${payload.quantidade} ficha(s)`,
+      description: `${eventoNome} - ${payload.quantidade} ficha(s)${payload.entrega ? " com entrega" : ""}`,
       payment_method_id: "pix",
       external_reference: codigoCompra,
       notification_url: env("MERCADO_PAGO_WEBHOOK_URL") || undefined,
@@ -181,6 +205,7 @@ Deno.serve(async (req) => {
       metadata: {
         compra_id: compra.id,
         codigo_compra: codigoCompra,
+        entrega: payload.entrega,
       },
     };
 
@@ -231,6 +256,11 @@ Deno.serve(async (req) => {
       qr_code: qrCode,
       qr_code_base64: qrCodeBase64,
       valor_total: valorTotal,
+      entrega: payload.entrega,
+      taxa_entrega: taxaEntrega,
+      endereco_rua: payload.entrega ? payload.enderecoRua : null,
+      endereco_numero: payload.entrega ? payload.enderecoNumero : null,
+      endereco_bairro: payload.entrega ? payload.enderecoBairro : null,
       status_pagamento: "pendente",
     });
   } catch (error) {
