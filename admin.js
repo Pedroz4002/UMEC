@@ -88,7 +88,7 @@ function renderAdminPedidos(data) {
 
   adminPedidosBody.innerHTML = pedidos.map((pedido) => {
     const senhas = pedido.senhas?.length ? pedido.senhas.join(", ") : "-";
-    const contato = `${escapeHtml(pedido.email)}<br>${escapeHtml(pedido.whatsapp)}`;
+    const contato = `${escapeHtml(pedido.email || "E-mail não informado")}<br>${escapeHtml(pedido.whatsapp)}`;
     const endereco = pedido.endereco_formatado || "-";
     const canCancel = pedido.status_pagamento !== "cancelado";
     const cancelButton = canCancel

@@ -78,7 +78,9 @@ function normalizePayload(payload: CompraPayload) {
 
   if (nome.length < 3) throw new Error("Informe o nome completo.");
   if (!/^\d{10,14}$/.test(whatsapp)) throw new Error("Informe um WhatsApp válido.");
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Informe um e-mail válido.");
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("Informe um e-mail válido ou deixe o campo em branco.");
+  }
   if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > 50) {
     throw new Error("Informe uma quantidade entre 1 e 50.");
   }
@@ -145,6 +147,7 @@ Deno.serve(async (req) => {
     const valorUnitario = Number(env("VALOR_UNITARIO", "10.00"));
     const taxaEntregaPadrao = Number(env("TAXA_ENTREGA", "2.00"));
     const estoqueTotal = getEstoqueTotal();
+    const payerEmailFallback = env("UMEC_ADMIN_EMAIL", "ph493591@gmail.com").trim();
     const eventoNome = env("EVENTO_NOME", "Refeição UMEC");
 
     if (!supabaseUrl || !serviceRoleKey || !mercadoPagoToken) {
@@ -156,10 +159,11 @@ Deno.serve(async (req) => {
     }
 
     if (!Number.isFinite(taxaEntregaPadrao) || taxaEntregaPadrao < 0) {
-      return json({ error: "TAXA_ENTREGA invÃ¡lida." }, 500);
+      return json({ error: "TAXA_ENTREGA inválida." }, 500);
     }
 
     const payload = normalizePayload(await req.json());
+    const payerEmail = payload.email || payerEmailFallback;
     const taxaEntrega = payload.entrega ? taxaEntregaPadrao : 0;
     const valorTotal = Number(((payload.quantidade * valorUnitario) + taxaEntrega).toFixed(2));
     const codigoCompra = createCodigoCompra();
@@ -201,7 +205,7 @@ Deno.serve(async (req) => {
       external_reference: codigoCompra,
       notification_url: env("MERCADO_PAGO_WEBHOOK_URL") || undefined,
       payer: {
-        email: payload.email,
+        email: payerEmail,
         first_name: firstName,
         last_name: lastName,
       },

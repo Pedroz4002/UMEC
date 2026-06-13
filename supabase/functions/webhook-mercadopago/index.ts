@@ -174,7 +174,7 @@ async function enviarEmailComPdf(supabase: ReturnType<typeof createClient>, comp
     "Nova compra paga na Panqueca UMEC.",
     "",
     `Nome: ${compra.nome}`,
-    `E-mail: ${compra.email}`,
+    `E-mail: ${compra.email || "Não informado"}`,
     `WhatsApp: ${compra.whatsapp}`,
     `Código da compra: ${compra.codigo_compra}`,
     `Quantidade de fichas: ${compra.quantidade}`,

@@ -298,6 +298,25 @@ label {
   font-weight: 700;
 }
 
+.field-title {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.optional-label {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  background: #eef1f6;
+  color: var(--muted);
+  padding: 3px 8px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .delivery-toggle {
   display: flex;
   align-items: flex-start;

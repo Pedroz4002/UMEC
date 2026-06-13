@@ -184,7 +184,7 @@ function buildWhatsAppUrl(compra) {
     `Olá, realizei a compra de ${compra.quantidade} panqueca(s) da UMEC.`,
     "",
     `Nome: ${compra.nome}`,
-    `E-mail: ${compra.email}`,
+    `E-mail: ${compra.email || "Não informado"}`,
     `WhatsApp: ${compra.whatsapp}`,
     entregaTexto,
     `Código da compra: ${compra.codigo_compra}`,
@@ -292,8 +292,13 @@ compraForm.addEventListener("submit", async (event) => {
     endereco_entrega: getEnderecoEntrega(),
   };
 
-  if (!formData.nome || !formData.whatsapp || !formData.email || formData.quantidade < 1) {
-    setMessage(compraMsg, "Preencha todos os campos corretamente.", "error");
+  if (!formData.nome || !formData.whatsapp || formData.quantidade < 1) {
+    setMessage(compraMsg, "Preencha nome, WhatsApp e quantidade corretamente.", "error");
+    return;
+  }
+
+  if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    setMessage(compraMsg, "Informe um e-mail válido ou deixe o campo em branco.", "error");
     return;
   }
 
