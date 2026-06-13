@@ -146,7 +146,7 @@ function updateEntregaState() {
   entregaRuaInput.required = entregaAtiva;
   entregaNumeroInput.required = entregaAtiva;
   entregaBairroInput.required = entregaAtiva;
-  entregaReferenciaInput.required = entregaAtiva;
+  entregaReferenciaInput.required = false;
   entregaTelefonePreview.textContent = formatPhonePreview(byId("whatsapp").value);
   updateTotal();
 }
@@ -297,8 +297,8 @@ compraForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  if (formData.entrega && (!formData.endereco_entrega.rua || !formData.endereco_entrega.numero || !formData.endereco_entrega.bairro || !formData.endereco_entrega.referencia)) {
-    setMessage(compraMsg, "Informe rua, número, bairro e ponto de referência para entrega.", "error");
+  if (formData.entrega && (!formData.endereco_entrega.rua || !formData.endereco_entrega.numero || !formData.endereco_entrega.bairro)) {
+    setMessage(compraMsg, "Informe rua, número e bairro para entrega.", "error");
     return;
   }
 

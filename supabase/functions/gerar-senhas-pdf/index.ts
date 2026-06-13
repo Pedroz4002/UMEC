@@ -132,7 +132,7 @@ async function gerarPdf(compra: Compra, senhas: Senha[]) {
     page.drawText(eventHorario, { x: 72, y: height - 664, size: 16, font, color: rgb(0.1, 0.1, 0.1) });
 
     page.drawRectangle({ x: 72, y: 108, width: width - 144, height: 58, color: rgb(0.96, 0.96, 0.96) });
-    page.drawText(compra.entrega ? "Entrega cadastrada" : "Retirada na UMEC", {
+    page.drawText(compra.entrega ? "Endereço de entrega" : "Retirada na UMEC", {
       x: 92,
       y: compra.entrega ? 142 : 132,
       size: 14,

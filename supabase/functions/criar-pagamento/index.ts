@@ -82,8 +82,8 @@ function normalizePayload(payload: CompraPayload) {
   if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > 50) {
     throw new Error("Informe uma quantidade entre 1 e 50.");
   }
-  if (entrega && (!enderecoRua || !enderecoNumero || !enderecoBairro || !enderecoReferencia)) {
-    throw new Error("Informe rua, número, bairro e ponto de referência para entrega.");
+  if (entrega && (!enderecoRua || !enderecoNumero || !enderecoBairro)) {
+    throw new Error("Informe rua, número e bairro para entrega.");
   }
 
   return { nome, whatsapp, email, quantidade, entrega, enderecoRua, enderecoNumero, enderecoBairro, enderecoReferencia };
