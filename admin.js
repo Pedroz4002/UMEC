@@ -89,11 +89,7 @@ function renderAdminPedidos(data) {
   adminPedidosBody.innerHTML = pedidos.map((pedido) => {
     const senhas = pedido.senhas?.length ? pedido.senhas.join(", ") : "-";
     const contato = `${escapeHtml(pedido.email)}<br>${escapeHtml(pedido.whatsapp)}`;
-    const endereco = pedido.entrega
-      ? [pedido.endereco_rua, pedido.endereco_numero ? `nÂº ${pedido.endereco_numero}` : "", pedido.endereco_bairro]
-        .filter(Boolean)
-        .join(", ")
-      : "-";
+    const endereco = pedido.endereco_formatado || "-";
     const canCancel = pedido.status_pagamento !== "cancelado";
     const cancelButton = canCancel
       ? `<button class="danger-button compact-button" type="button" data-cancelar-pedido="${escapeHtml(pedido.codigo_compra)}">Cancelar</button>`
@@ -106,7 +102,7 @@ function renderAdminPedidos(data) {
         <td>${escapeHtml(pedido.nome)}</td>
         <td>${contato}</td>
         <td><span class="status-badge ${escapeHtml(pedido.status_pagamento)}">${escapeHtml(pedido.status_pagamento)}</span></td>
-        <td>${pedido.entrega ? `Sim<br><small>${escapeHtml(endereco)}</small>` : "NÃ£o"}</td>
+        <td>${pedido.entrega ? `Sim<br><small>${escapeHtml(endereco)}</small>` : "Não"}</td>
         <td>${escapeHtml(senhas)}</td>
         <td>${money.format(Number(pedido.valor_total || 0))}</td>
         <td>${cancelButton}</td>

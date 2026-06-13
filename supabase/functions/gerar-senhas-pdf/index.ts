@@ -19,6 +19,7 @@ type Compra = {
   endereco_rua: string | null;
   endereco_numero: string | null;
   endereco_bairro: string | null;
+  endereco_referencia: string | null;
   status_pagamento: string;
   pdf_path: string | null;
   codigo_compra: string;
@@ -82,7 +83,8 @@ function formatEndereco(compra: Compra) {
     compra.endereco_numero ? `nº ${compra.endereco_numero}` : "",
     compra.endereco_bairro,
   ].filter(Boolean).join(", ");
-  return endereco || "Endereço não informado.";
+  const referencia = compra.endereco_referencia ? `Referência: ${compra.endereco_referencia}` : "";
+  return [endereco, referencia].filter(Boolean).join(" | ") || "Endereço não informado.";
 }
 
 function truncate(value: string, max = 74) {

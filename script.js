@@ -25,6 +25,7 @@ const entregaBox = byId("entrega-box");
 const entregaRuaInput = byId("entrega-rua");
 const entregaNumeroInput = byId("entrega-numero");
 const entregaBairroInput = byId("entrega-bairro");
+const entregaReferenciaInput = byId("entrega-referencia");
 const entregaTelefonePreview = byId("entrega-telefone-preview");
 const totalEl = byId("valor-total");
 const subtotalPanquecasEl = byId("subtotal-panquecas");
@@ -125,6 +126,7 @@ function getEnderecoEntrega() {
     rua: entregaRuaInput.value.trim(),
     numero: entregaNumeroInput.value.trim(),
     bairro: entregaBairroInput.value.trim(),
+    referencia: entregaReferenciaInput.value.trim(),
   };
 }
 
@@ -133,7 +135,9 @@ function formatEnderecoEntrega(data) {
   const rua = data.endereco_rua || data.entrega_rua || "";
   const numero = data.endereco_numero || data.entrega_numero || "";
   const bairro = data.endereco_bairro || data.entrega_bairro || "";
-  return [rua, numero ? `nº ${numero}` : "", bairro].filter(Boolean).join(", ") || "-";
+  const referencia = data.endereco_referencia || data.entrega_referencia || "";
+  const endereco = [rua, numero ? `nº ${numero}` : "", bairro].filter(Boolean).join(", ");
+  return [endereco, referencia ? `Referência: ${referencia}` : ""].filter(Boolean).join(" | ") || "-";
 }
 
 function updateEntregaState() {
@@ -142,6 +146,7 @@ function updateEntregaState() {
   entregaRuaInput.required = entregaAtiva;
   entregaNumeroInput.required = entregaAtiva;
   entregaBairroInput.required = entregaAtiva;
+  entregaReferenciaInput.required = entregaAtiva;
   entregaTelefonePreview.textContent = formatPhonePreview(byId("whatsapp").value);
   updateTotal();
 }
@@ -174,7 +179,7 @@ async function callFunction(name, payload) {
 }
 
 function buildWhatsAppUrl(compra) {
-  const entregaTexto = compra.entrega ? `Entrega: Sim - ${formatEnderecoEntrega(compra)}` : "Entrega: Nao";
+  const entregaTexto = compra.entrega ? `Entrega: Sim - ${formatEnderecoEntrega(compra)}` : "Entrega: Não";
   const message = [
     `Olá, realizei a compra de ${compra.quantidade} panqueca(s) da UMEC.`,
     "",
@@ -292,8 +297,8 @@ compraForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  if (formData.entrega && (!formData.endereco_entrega.rua || !formData.endereco_entrega.numero || !formData.endereco_entrega.bairro)) {
-    setMessage(compraMsg, "Informe rua, nÃºmero e bairro para entrega.", "error");
+  if (formData.entrega && (!formData.endereco_entrega.rua || !formData.endereco_entrega.numero || !formData.endereco_entrega.bairro || !formData.endereco_entrega.referencia)) {
+    setMessage(compraMsg, "Informe rua, número, bairro e ponto de referência para entrega.", "error");
     return;
   }
 
@@ -406,7 +411,7 @@ consultaForm.addEventListener("submit", async (event) => {
     byId("resultado-status").textContent = isPago ? "Pagamento confirmado" : "Pagamento ainda não confirmado";
     byId("resultado-quantidade").textContent = data.quantidade || "-";
     byId("resultado-total").textContent = data.valor_total ? money.format(Number(data.valor_total)) : "-";
-    byId("resultado-entrega").textContent = data.entrega ? "Sim" : "NÃ£o";
+    byId("resultado-entrega").textContent = data.entrega ? "Sim" : "Não";
     byId("resultado-endereco").textContent = formatEnderecoEntrega(data);
     byId("resultado-entrega-row").classList.remove("hidden");
     byId("resultado-endereco-row").classList.toggle("hidden", !data.entrega);

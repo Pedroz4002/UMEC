@@ -18,6 +18,7 @@ type Compra = {
   endereco_rua: string | null;
   endereco_numero: string | null;
   endereco_bairro: string | null;
+  endereco_referencia: string | null;
   status_pagamento: string;
   pdf_path: string | null;
   codigo_compra: string;
@@ -118,11 +119,13 @@ function arrayBufferToBase64(buffer: ArrayBuffer) {
 
 function formatEndereco(compra: Compra) {
   if (!compra.entrega) return "Retirada na UMEC";
-  return [
+  const endereco = [
     compra.endereco_rua,
     compra.endereco_numero ? `nº ${compra.endereco_numero}` : "",
     compra.endereco_bairro,
-  ].filter(Boolean).join(", ") || "Endereço não informado";
+  ].filter(Boolean).join(", ");
+  const referencia = compra.endereco_referencia ? `Referência: ${compra.endereco_referencia}` : "";
+  return [endereco, referencia].filter(Boolean).join(" | ") || "Endereço não informado";
 }
 
 async function sendResendEmail(resendApiKey: string, payload: Record<string, unknown>) {

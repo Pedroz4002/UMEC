@@ -16,6 +16,7 @@ type CompraPayload = {
     rua?: string;
     numero?: string;
     bairro?: string;
+    referencia?: string;
   };
 };
 
@@ -73,6 +74,7 @@ function normalizePayload(payload: CompraPayload) {
   const enderecoRua = String(payload.endereco_entrega?.rua ?? "").trim();
   const enderecoNumero = String(payload.endereco_entrega?.numero ?? "").trim();
   const enderecoBairro = String(payload.endereco_entrega?.bairro ?? "").trim();
+  const enderecoReferencia = String(payload.endereco_entrega?.referencia ?? "").trim();
 
   if (nome.length < 3) throw new Error("Informe o nome completo.");
   if (!/^\d{10,14}$/.test(whatsapp)) throw new Error("Informe um WhatsApp válido.");
@@ -80,11 +82,11 @@ function normalizePayload(payload: CompraPayload) {
   if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > 50) {
     throw new Error("Informe uma quantidade entre 1 e 50.");
   }
-  if (entrega && (!enderecoRua || !enderecoNumero || !enderecoBairro)) {
-    throw new Error("Informe rua, nÃºmero e bairro para entrega.");
+  if (entrega && (!enderecoRua || !enderecoNumero || !enderecoBairro || !enderecoReferencia)) {
+    throw new Error("Informe rua, número, bairro e ponto de referência para entrega.");
   }
 
-  return { nome, whatsapp, email, quantidade, entrega, enderecoRua, enderecoNumero, enderecoBairro };
+  return { nome, whatsapp, email, quantidade, entrega, enderecoRua, enderecoNumero, enderecoBairro, enderecoReferencia };
 }
 
 function createCodigoCompra() {
@@ -179,6 +181,7 @@ Deno.serve(async (req) => {
         endereco_rua: payload.entrega ? payload.enderecoRua : null,
         endereco_numero: payload.entrega ? payload.enderecoNumero : null,
         endereco_bairro: payload.entrega ? payload.enderecoBairro : null,
+        endereco_referencia: payload.entrega ? payload.enderecoReferencia : null,
         status_pagamento: "pendente",
         codigo_compra: codigoCompra,
       })
@@ -261,6 +264,7 @@ Deno.serve(async (req) => {
       endereco_rua: payload.entrega ? payload.enderecoRua : null,
       endereco_numero: payload.entrega ? payload.enderecoNumero : null,
       endereco_bairro: payload.entrega ? payload.enderecoBairro : null,
+      endereco_referencia: payload.entrega ? payload.enderecoReferencia : null,
       status_pagamento: "pendente",
     });
   } catch (error) {

@@ -27,6 +27,7 @@ type Compra = {
   endereco_rua: string | null;
   endereco_numero: string | null;
   endereco_bairro: string | null;
+  endereco_referencia: string | null;
   status_pagamento: string;
   created_at: string;
 };
@@ -113,13 +114,16 @@ function formatEndereco(compra: {
   endereco_rua?: string | null;
   endereco_numero?: string | null;
   endereco_bairro?: string | null;
+  endereco_referencia?: string | null;
 }) {
   if (!compra.entrega) return "-";
-  return [
+  const endereco = [
     compra.endereco_rua,
     compra.endereco_numero ? `nº ${compra.endereco_numero}` : "",
     compra.endereco_bairro,
-  ].filter(Boolean).join(", ") || "-";
+  ].filter(Boolean).join(", ");
+  const referencia = compra.endereco_referencia ? `Referência: ${compra.endereco_referencia}` : "";
+  return [endereco, referencia].filter(Boolean).join(" | ") || "-";
 }
 
 function truncate(value: string, max: number) {
@@ -134,7 +138,7 @@ function getEstoqueTotal() {
 async function getPedidos(supabase: ReturnType<typeof createClient>) {
   const { data: compras, error: comprasError } = await supabase
     .from("compras")
-    .select("id,codigo_compra,nome,email,whatsapp,quantidade,valor_total,entrega,taxa_entrega,endereco_rua,endereco_numero,endereco_bairro,status_pagamento,created_at")
+    .select("id,codigo_compra,nome,email,whatsapp,quantidade,valor_total,entrega,taxa_entrega,endereco_rua,endereco_numero,endereco_bairro,endereco_referencia,status_pagamento,created_at")
     .order("created_at", { ascending: false });
 
   if (comprasError) {
@@ -171,6 +175,7 @@ async function getPedidos(supabase: ReturnType<typeof createClient>) {
     endereco_rua: compra.endereco_rua,
     endereco_numero: compra.endereco_numero,
     endereco_bairro: compra.endereco_bairro,
+    endereco_referencia: compra.endereco_referencia,
     endereco_formatado: formatEndereco(compra),
     status_pagamento: compra.status_pagamento,
     created_at: compra.created_at,
@@ -182,7 +187,7 @@ async function getPedidos(supabase: ReturnType<typeof createClient>) {
 async function getLinhasPdf(supabase: ReturnType<typeof createClient>, somenteEntregas = false) {
   const { data: compras, error: comprasError } = await supabase
     .from("compras")
-    .select("id,nome,whatsapp,status_pagamento,entrega,endereco_rua,endereco_numero,endereco_bairro")
+    .select("id,nome,whatsapp,status_pagamento,entrega,endereco_rua,endereco_numero,endereco_bairro,endereco_referencia")
     .eq("status_pagamento", "pago");
 
   if (comprasError) {
@@ -252,7 +257,7 @@ async function gerarPdfGeral(supabase: ReturnType<typeof createClient>, somenteE
     page.drawText("Nome", { x: 86, y, size: 10, font: bold });
     page.drawText("Telefone", { x: 235, y, size: 10, font: bold });
     page.drawText("Pago", { x: 350, y, size: 10, font: bold });
-    page.drawText("Entrega / Endereco", { x: 395, y, size: 10, font: bold });
+    page.drawText("Entrega / Endereço", { x: 395, y, size: 10, font: bold });
     y -= 12;
     page.drawLine({ start: { x: 42, y }, end: { x: 552, y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
     y -= 18;
@@ -270,7 +275,7 @@ async function gerarPdfGeral(supabase: ReturnType<typeof createClient>, somenteE
     page.drawText(linha.ficha, { x: 42, y, size: 10, font: bold });
     page.drawText(truncate(linha.nome, 24), { x: 86, y, size: 10, font });
     page.drawText(linha.whatsapp, { x: 235, y, size: 9, font });
-    page.drawText(linha.status_pagamento === "pago" ? "Sim" : "Nao", { x: 350, y, size: 10, font: bold });
+    page.drawText(linha.status_pagamento === "pago" ? "Sim" : "Não", { x: 350, y, size: 10, font: bold });
     page.drawText(linha.entrega ? truncate(linha.endereco, 34) : "Retirada", { x: 395, y, size: 9, font });
     y -= 20;
   }
