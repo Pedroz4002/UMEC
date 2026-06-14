@@ -74,6 +74,13 @@ function getEstoqueTotal() {
   return estoqueTotal;
 }
 
+function getPixExpirationMinutes() {
+  const raw = env("PIX_EXPIRATION_MINUTES", "5").trim();
+  const minutes = Number(raw);
+  if (!Number.isFinite(minutes) || minutes < 1) return 5;
+  return Math.min(Math.floor(minutes), 60);
+}
+
 function normalizePayload(payload: CompraPayload) {
   const nome = String(payload.nome ?? "").trim();
   const whatsapp = onlyDigits(String(payload.whatsapp ?? ""));
@@ -303,6 +310,7 @@ Deno.serve(async (req) => {
     const valorUnitario = Number(env("VALOR_UNITARIO", "10.00"));
     const taxaEntregaPadrao = Number(env("TAXA_ENTREGA", "2.00"));
     const estoqueTotal = getEstoqueTotal();
+    const pixExpirationMinutes = getPixExpirationMinutes();
     const payerEmailFallback = env("UMEC_ADMIN_EMAIL", "ph493591@gmail.com").trim();
     const eventoNome = env("EVENTO_NOME", "Refeição UMEC");
 
@@ -396,6 +404,7 @@ Deno.serve(async (req) => {
       description: `${eventoNome} - ${payload.quantidade} ficha(s)${payload.entrega ? " com entrega" : ""}`,
       payment_method_id: "pix",
       external_reference: codigoCompra,
+      date_of_expiration: new Date(Date.now() + (pixExpirationMinutes * 60 * 1000)).toISOString(),
       notification_url: env("MERCADO_PAGO_WEBHOOK_URL") || undefined,
       payer: {
         email: payerEmail,
