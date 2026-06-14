@@ -308,8 +308,8 @@ async function gerarPdfGeral(supabase: ReturnType<typeof createClient>, somenteE
     page.drawText("Ficha", { x: 42, y, size: 10, font: bold });
     page.drawText("Nome", { x: 86, y, size: 10, font: bold });
     page.drawText("Telefone", { x: 235, y, size: 10, font: bold });
-    page.drawText("Pagamento", { x: 350, y, size: 10, font: bold });
-    page.drawText("Tipo", { x: 395, y, size: 10, font: bold });
+    page.drawText("Pagamento", { x: 330, y, size: 10, font: bold });
+    page.drawText("Tipo", { x: 455, y, size: 10, font: bold });
     y -= 12;
     page.drawLine({ start: { x: 42, y }, end: { x: 552, y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
     y -= 18;
@@ -368,8 +368,8 @@ async function gerarPdfGeral(supabase: ReturnType<typeof createClient>, somenteE
     page.drawText(linha.ficha, { x: 42, y, size: 10, font: bold });
     page.drawText(truncate(linha.nome, 24), { x: 86, y, size: 10, font });
     page.drawText(linha.whatsapp, { x: 235, y, size: 9, font });
-    page.drawText(truncate(pagamento, 18), { x: 350, y, size: 9, font: bold });
-    page.drawText(linha.entrega ? "Entrega" : "Retirada", { x: 395, y, size: 9, font });
+    page.drawText(truncate(pagamento, 26), { x: 330, y, size: 9, font: bold });
+    page.drawText(linha.entrega ? "Entrega" : "Retirada", { x: 455, y, size: 9, font });
     y -= 20;
   }
 
