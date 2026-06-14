@@ -210,8 +210,8 @@ async function cancelExpiredPendingPix(
   const cutoff = new Date(Date.now() - (pixExpirationMinutes * 60 * 1000)).toISOString();
   const { data: compras, error } = await supabase
     .from("compras")
-    .select("id,codigo_compra,mercado_pago_payment_id")
-    .eq("status_pagamento", "pendente")
+    .select("id,codigo_compra,mercado_pago_payment_id,status_pagamento")
+    .in("status_pagamento", ["pendente", "cancelado"])
     .lte("created_at", cutoff)
     .limit(100);
 
@@ -222,8 +222,12 @@ async function cancelExpiredPendingPix(
 
   for (const compra of compras ?? []) {
     const paymentId = String(compra.mercado_pago_payment_id ?? "");
+    if (compra.status_pagamento === "cancelado" && !paymentId) continue;
+
     const shouldCancel = paymentId ? await cancelMercadoPagoPayment(paymentId, mercadoPagoToken) : true;
     if (!shouldCancel) continue;
+
+    if (compra.status_pagamento === "cancelado") continue;
 
     const { error: updateError } = await supabase
       .from("compras")

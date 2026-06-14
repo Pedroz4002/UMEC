@@ -217,25 +217,70 @@ async function cancelMercadoPagoPayment(paymentId: string) {
   return true;
 }
 
+async function getMercadoPagoPaymentStatus(paymentId: string) {
+  const mercadoPagoToken = env("MERCADO_PAGO_ACCESS_TOKEN");
+  if (!paymentId || !mercadoPagoToken) return "";
+
+  const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+    headers: {
+      Authorization: `Bearer ${mercadoPagoToken}`,
+    },
+  });
+  const payment = await response.json().catch(() => ({}));
+  return String(payment?.status ?? "");
+}
+
 async function cancelExpiredPendingPix(supabase: ReturnType<typeof createClient>) {
   const cutoff = new Date(Date.now() - (getPixExpirationMinutes() * 60 * 1000)).toISOString();
   const { data: compras, error } = await supabase
     .from("compras")
-    .select("id,codigo_compra,mercado_pago_payment_id")
-    .eq("status_pagamento", "pendente")
+    .select("id,codigo_compra,mercado_pago_payment_id,status_pagamento")
+    .in("status_pagamento", ["pendente", "cancelado"])
     .lte("created_at", cutoff)
     .limit(100);
 
   if (error) {
     console.error("Erro ao buscar Pix pendentes vencidos", error);
-    return { cancelados: 0 };
+    return { encontrados: 0, tentados_mercado_pago: 0, cancelados_mercado_pago: 0, marcados_cancelados: 0, falhas: 0, detalhes: [] };
   }
 
-  let cancelados = 0;
+  let tentadosMercadoPago = 0;
+  let canceladosMercadoPago = 0;
+  let marcadosCancelados = 0;
+  let falhas = 0;
+  const detalhes: Array<{
+    codigo_compra: string;
+    payment_id: string;
+    status_mercado_pago: string;
+    cancelado_mercado_pago: boolean;
+  }> = [];
+
   for (const compra of compras ?? []) {
     const paymentId = String(compra.mercado_pago_payment_id ?? "");
-    const shouldCancel = paymentId ? await cancelMercadoPagoPayment(paymentId) : true;
-    if (!shouldCancel) continue;
+    if (compra.status_pagamento === "cancelado" && !paymentId) continue;
+
+    let shouldCancel = true;
+    if (paymentId) {
+      tentadosMercadoPago += 1;
+      shouldCancel = await cancelMercadoPagoPayment(paymentId);
+      if (shouldCancel) {
+        canceladosMercadoPago += 1;
+      }
+      detalhes.push({
+        codigo_compra: String(compra.codigo_compra),
+        payment_id: paymentId,
+        status_mercado_pago: await getMercadoPagoPaymentStatus(paymentId),
+        cancelado_mercado_pago: shouldCancel,
+      });
+    }
+    if (!shouldCancel) {
+      falhas += 1;
+      continue;
+    }
+
+    if (compra.status_pagamento === "cancelado") {
+      continue;
+    }
 
     const { error: updateError } = await supabase
       .from("compras")
@@ -249,12 +294,20 @@ async function cancelExpiredPendingPix(supabase: ReturnType<typeof createClient>
 
     if (updateError) {
       console.error("Erro ao cancelar Pix vencido no sistema", { codigo: compra.codigo_compra, updateError });
+      falhas += 1;
     } else {
-      cancelados += 1;
+      marcadosCancelados += 1;
     }
   }
 
-  return { cancelados };
+  return {
+    encontrados: compras?.length ?? 0,
+    tentados_mercado_pago: tentadosMercadoPago,
+    cancelados_mercado_pago: canceladosMercadoPago,
+    marcados_cancelados: marcadosCancelados,
+    falhas,
+    detalhes,
+  };
 }
 
 async function getPedidos(supabase: ReturnType<typeof createClient>) {
@@ -480,6 +533,9 @@ async function cancelarPedido(supabase: ReturnType<typeof createClient>, codigoC
   }
 
   if (compra.status_pagamento === "cancelado") {
+    if (compra.mercado_pago_payment_id) {
+      await cancelMercadoPagoPayment(String(compra.mercado_pago_payment_id));
+    }
     return { codigo_compra: compra.codigo_compra, status_pagamento: "cancelado", already_cancelled: true };
   }
 
@@ -545,7 +601,7 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
-    await cancelExpiredPendingPix(supabase);
+    const limpezaPix = await cancelExpiredPendingPix(supabase);
 
     if (payload.action === "cancel") {
       const cancelado = await cancelarPedido(supabase, String(payload.codigo_compra ?? ""));
@@ -584,6 +640,7 @@ Deno.serve(async (req) => {
       total_arrecadado: pedidos
         .filter((pedido) => ["pago", "dinheiro"].includes(pedido.status_pagamento))
         .reduce((total, pedido) => total + Number(pedido.valor_total ?? 0), 0),
+      limpeza_pix: limpezaPix,
     });
   } catch (error) {
     console.error(error);
