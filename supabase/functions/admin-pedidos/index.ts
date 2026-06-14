@@ -47,6 +47,7 @@ type LinhaPdf = {
   whatsapp: string;
   status_pagamento: string;
   forma_pagamento: string;
+  troco_para: number | null;
   entrega: boolean;
   endereco: string;
 };
@@ -133,6 +134,40 @@ function truncate(value: string, max: number) {
   return value.length > max ? `${value.slice(0, max - 3)}...` : value;
 }
 
+function formatPagamento(linha: { forma_pagamento: string; troco_para?: number | null }) {
+  if (linha.forma_pagamento !== "dinheiro") return "Pix";
+  if (!linha.troco_para) return "Dinheiro";
+  const troco = Number(linha.troco_para).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+  return `Dinheiro - troco para ${troco}`;
+}
+
+function wrapTextByWidth(
+  text: string,
+  font: { widthOfTextAtSize: (text: string, size: number) => number },
+  size: number,
+  maxWidth: number,
+) {
+  const words = String(text || "-").split(/\s+/);
+  const lines: string[] = [];
+  let current = "";
+
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (font.widthOfTextAtSize(next, size) > maxWidth && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = next;
+    }
+  }
+
+  if (current) lines.push(current);
+  return lines;
+}
+
 function getEstoqueTotal() {
   const estoqueTotal = Number(env("ESTOQUE_TOTAL", "50"));
   return Number.isInteger(estoqueTotal) && estoqueTotal > 0 ? estoqueTotal : 50;
@@ -192,7 +227,7 @@ async function getPedidos(supabase: ReturnType<typeof createClient>) {
 async function getLinhasPdf(supabase: ReturnType<typeof createClient>, somenteEntregas = false) {
   const { data: compras, error: comprasError } = await supabase
     .from("compras")
-    .select("id,nome,whatsapp,status_pagamento,forma_pagamento,entrega,endereco_rua,endereco_numero,endereco_bairro,endereco_referencia")
+    .select("id,nome,whatsapp,status_pagamento,forma_pagamento,troco_para,entrega,endereco_rua,endereco_numero,endereco_bairro,endereco_referencia")
     .in("status_pagamento", ["pago", "dinheiro"]);
 
   if (comprasError) {
@@ -226,6 +261,7 @@ async function getLinhasPdf(supabase: ReturnType<typeof createClient>, somenteEn
         whatsapp: formatPhone(senha.whatsapp ?? compra.whatsapp),
         status_pagamento: compra.status_pagamento,
         forma_pagamento: compra.forma_pagamento,
+        troco_para: compra.troco_para === null ? null : Number(compra.troco_para),
         entrega: compra.entrega,
         endereco: formatEndereco(compra),
       };
@@ -259,6 +295,16 @@ async function gerarPdfGeral(supabase: ReturnType<typeof createClient>, somenteE
       color: rgb(0.35, 0.35, 0.35),
     });
     y -= 28;
+    if (somenteEntregas) {
+      page.drawText("Ficha", { x: 42, y, size: 10, font: bold });
+      page.drawText("Nome e entrega", { x: 86, y, size: 10, font: bold });
+      page.drawText("Telefone", { x: 430, y, size: 10, font: bold });
+      y -= 12;
+      page.drawLine({ start: { x: 42, y }, end: { x: 552, y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+      y -= 18;
+      return;
+    }
+
     page.drawText("Ficha", { x: 42, y, size: 10, font: bold });
     page.drawText("Nome", { x: 86, y, size: 10, font: bold });
     page.drawText("Telefone", { x: 235, y, size: 10, font: bold });
@@ -272,6 +318,47 @@ async function gerarPdfGeral(supabase: ReturnType<typeof createClient>, somenteE
   header();
 
   for (const linha of linhas) {
+    const pagamento = formatPagamento(linha);
+
+    if (somenteEntregas) {
+      const pagamentoLinhas = wrapTextByWidth(`Pagamento: ${pagamento}`, font, 9, 450);
+      const enderecoLinhas = wrapTextByWidth(`Endereço: ${linha.endereco}`, font, 9, 450);
+      const rowHeight = 46 + ((pagamentoLinhas.length + enderecoLinhas.length) * 12);
+
+      if (y - rowHeight < 54) {
+        page = pdf.addPage([595.28, 841.89]);
+        y = 780;
+        header();
+      }
+
+      page.drawRectangle({
+        x: 38,
+        y: y - rowHeight + 12,
+        width: 516,
+        height: rowHeight - 8,
+        borderColor: rgb(0.84, 0.84, 0.84),
+        borderWidth: 0.8,
+        color: rgb(0.985, 0.985, 0.985),
+      });
+
+      page.drawText(linha.ficha, { x: 48, y: y - 14, size: 12, font: bold, color: rgb(0.85, 0.08, 0.11) });
+      page.drawText(truncate(linha.nome, 42), { x: 86, y: y - 12, size: 11, font: bold });
+      page.drawText(linha.whatsapp, { x: 430, y: y - 12, size: 9, font });
+
+      let textY = y - 30;
+      for (const line of pagamentoLinhas) {
+        page.drawText(line, { x: 86, y: textY, size: 9, font });
+        textY -= 12;
+      }
+      for (const line of enderecoLinhas) {
+        page.drawText(line, { x: 86, y: textY, size: 9, font });
+        textY -= 12;
+      }
+
+      y -= rowHeight;
+      continue;
+    }
+
     if (y < 60) {
       page = pdf.addPage([595.28, 841.89]);
       y = 780;
@@ -281,7 +368,7 @@ async function gerarPdfGeral(supabase: ReturnType<typeof createClient>, somenteE
     page.drawText(linha.ficha, { x: 42, y, size: 10, font: bold });
     page.drawText(truncate(linha.nome, 24), { x: 86, y, size: 10, font });
     page.drawText(linha.whatsapp, { x: 235, y, size: 9, font });
-    page.drawText(linha.forma_pagamento === "dinheiro" ? "Dinheiro" : "Pix", { x: 350, y, size: 9, font: bold });
+    page.drawText(truncate(pagamento, 18), { x: 350, y, size: 9, font: bold });
     page.drawText(linha.entrega ? truncate(linha.endereco, 34) : "Retirada", { x: 395, y, size: 9, font });
     y -= 20;
   }
