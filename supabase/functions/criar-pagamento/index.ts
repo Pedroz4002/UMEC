@@ -75,9 +75,9 @@ function getEstoqueTotal() {
 }
 
 function getPixExpirationMinutes() {
-  const raw = env("PIX_EXPIRATION_MINUTES", "5").trim();
+  const raw = env("PIX_EXPIRATION_MINUTES", "15").trim();
   const minutes = Number(raw);
-  if (!Number.isFinite(minutes) || minutes < 1) return 5;
+  if (!Number.isFinite(minutes) || minutes < 1) return 15;
   return Math.min(Math.floor(minutes), 60);
 }
 
@@ -163,6 +163,81 @@ async function assertEstoqueDisponivel(
 
   if (quantidadeSolicitada > disponivel) {
     throw new Error(`Restam apenas ${disponivel} ficha(s) disponíveis.`);
+  }
+}
+
+async function cancelMercadoPagoPayment(paymentId: string, mercadoPagoToken: string) {
+  if (!paymentId || !mercadoPagoToken) return false;
+
+  const paymentResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+    headers: {
+      Authorization: `Bearer ${mercadoPagoToken}`,
+    },
+  });
+  const payment = await paymentResponse.json().catch(() => ({}));
+  const status = String(payment?.status ?? "");
+
+  if (["approved", "accredited", "refunded", "charged_back"].includes(status)) {
+    return false;
+  }
+  if (["cancelled", "rejected"].includes(status)) {
+    return true;
+  }
+
+  const cancelResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${mercadoPagoToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status: "cancelled" }),
+  });
+
+  if (!cancelResponse.ok) {
+    const error = await cancelResponse.json().catch(() => ({}));
+    console.error("Não foi possível cancelar Pix vencido no Mercado Pago", { paymentId, error });
+    return false;
+  }
+
+  return true;
+}
+
+async function cancelExpiredPendingPix(
+  supabase: ReturnType<typeof createClient>,
+  mercadoPagoToken: string,
+  pixExpirationMinutes: number,
+) {
+  const cutoff = new Date(Date.now() - (pixExpirationMinutes * 60 * 1000)).toISOString();
+  const { data: compras, error } = await supabase
+    .from("compras")
+    .select("id,codigo_compra,mercado_pago_payment_id")
+    .eq("status_pagamento", "pendente")
+    .lte("created_at", cutoff)
+    .limit(100);
+
+  if (error) {
+    console.error("Erro ao buscar Pix pendentes vencidos", error);
+    return;
+  }
+
+  for (const compra of compras ?? []) {
+    const paymentId = String(compra.mercado_pago_payment_id ?? "");
+    const shouldCancel = paymentId ? await cancelMercadoPagoPayment(paymentId, mercadoPagoToken) : true;
+    if (!shouldCancel) continue;
+
+    const { error: updateError } = await supabase
+      .from("compras")
+      .update({
+        status_pagamento: "cancelado",
+        email_enviado: false,
+        email_enviado_at: null,
+      })
+      .eq("id", compra.id)
+      .eq("status_pagamento", "pendente");
+
+    if (updateError) {
+      console.error("Erro ao cancelar Pix vencido no sistema", { codigo: compra.codigo_compra, updateError });
+    }
   }
 }
 
@@ -342,6 +417,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
     const statusPagamento = payload.formaPagamento === "dinheiro" ? "dinheiro" : "pendente";
 
+    await cancelExpiredPendingPix(supabase, mercadoPagoToken, pixExpirationMinutes);
     await assertEstoqueDisponivel(supabase, payload.quantidade, estoqueTotal);
 
     const { data: compra, error: insertError } = await supabase

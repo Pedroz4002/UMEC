@@ -173,6 +173,90 @@ function getEstoqueTotal() {
   return Number.isInteger(estoqueTotal) && estoqueTotal > 0 ? estoqueTotal : 50;
 }
 
+function getPixExpirationMinutes() {
+  const raw = env("PIX_EXPIRATION_MINUTES", "15").trim();
+  const minutes = Number(raw);
+  if (!Number.isFinite(minutes) || minutes < 1) return 15;
+  return Math.min(Math.floor(minutes), 60);
+}
+
+async function cancelMercadoPagoPayment(paymentId: string) {
+  const mercadoPagoToken = env("MERCADO_PAGO_ACCESS_TOKEN");
+  if (!paymentId || !mercadoPagoToken) return false;
+
+  const paymentResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+    headers: {
+      Authorization: `Bearer ${mercadoPagoToken}`,
+    },
+  });
+  const payment = await paymentResponse.json().catch(() => ({}));
+  const status = String(payment?.status ?? "");
+
+  if (["approved", "accredited", "refunded", "charged_back"].includes(status)) {
+    return false;
+  }
+  if (["cancelled", "rejected"].includes(status)) {
+    return true;
+  }
+
+  const cancelResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${mercadoPagoToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status: "cancelled" }),
+  });
+
+  if (!cancelResponse.ok) {
+    const error = await cancelResponse.json().catch(() => ({}));
+    console.error("Nao foi possivel cancelar Pix vencido no Mercado Pago", { paymentId, error });
+    return false;
+  }
+
+  return true;
+}
+
+async function cancelExpiredPendingPix(supabase: ReturnType<typeof createClient>) {
+  const cutoff = new Date(Date.now() - (getPixExpirationMinutes() * 60 * 1000)).toISOString();
+  const { data: compras, error } = await supabase
+    .from("compras")
+    .select("id,codigo_compra,mercado_pago_payment_id")
+    .eq("status_pagamento", "pendente")
+    .lte("created_at", cutoff)
+    .limit(100);
+
+  if (error) {
+    console.error("Erro ao buscar Pix pendentes vencidos", error);
+    return { cancelados: 0 };
+  }
+
+  let cancelados = 0;
+  for (const compra of compras ?? []) {
+    const paymentId = String(compra.mercado_pago_payment_id ?? "");
+    const shouldCancel = paymentId ? await cancelMercadoPagoPayment(paymentId) : true;
+    if (!shouldCancel) continue;
+
+    const { error: updateError } = await supabase
+      .from("compras")
+      .update({
+        status_pagamento: "cancelado",
+        email_enviado: false,
+        email_enviado_at: null,
+      })
+      .eq("id", compra.id)
+      .eq("status_pagamento", "pendente");
+
+    if (updateError) {
+      console.error("Erro ao cancelar Pix vencido no sistema", { codigo: compra.codigo_compra, updateError });
+    } else {
+      cancelados += 1;
+    }
+  }
+
+  return { cancelados };
+}
+
 async function getPedidos(supabase: ReturnType<typeof createClient>) {
   const { data: compras, error: comprasError } = await supabase
     .from("compras")
@@ -386,7 +470,7 @@ async function cancelarPedido(supabase: ReturnType<typeof createClient>, codigoC
 
   const { data: compra, error: compraError } = await supabase
     .from("compras")
-    .select("id,codigo_compra,status_pagamento,pdf_path")
+    .select("id,codigo_compra,status_pagamento,pdf_path,mercado_pago_payment_id")
     .eq("codigo_compra", codigo)
     .single();
 
@@ -397,6 +481,10 @@ async function cancelarPedido(supabase: ReturnType<typeof createClient>, codigoC
 
   if (compra.status_pagamento === "cancelado") {
     return { codigo_compra: compra.codigo_compra, status_pagamento: "cancelado", already_cancelled: true };
+  }
+
+  if (compra.status_pagamento === "pendente" && compra.mercado_pago_payment_id) {
+    await cancelMercadoPagoPayment(String(compra.mercado_pago_payment_id));
   }
 
   const { error: senhasError } = await supabase
@@ -457,6 +545,7 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+    await cancelExpiredPendingPix(supabase);
 
     if (payload.action === "cancel") {
       const cancelado = await cancelarPedido(supabase, String(payload.codigo_compra ?? ""));
