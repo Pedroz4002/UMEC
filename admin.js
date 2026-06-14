@@ -75,6 +75,14 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function getPagamentoLabel(pedido) {
+  if (pedido.status_pagamento === "cancelado") return "Cancelado";
+  if (pedido.forma_pagamento === "dinheiro") return "Dinheiro";
+  if (pedido.status_pagamento === "pago") return "Pix pago";
+  if (pedido.status_pagamento === "pendente") return "Pix pendente";
+  return pedido.status_pagamento;
+}
+
 function renderAdminPedidos(data) {
   const pedidos = data.pedidos || [];
   adminResumo.textContent = `${pedidos.length} pedido(s) | ${data.total_fichas_pagas || 0} ficha(s) paga(s)`;
@@ -90,6 +98,8 @@ function renderAdminPedidos(data) {
     const senhas = pedido.senhas?.length ? pedido.senhas.join(", ") : "-";
     const contato = `${escapeHtml(pedido.email || "E-mail não informado")}<br>${escapeHtml(pedido.whatsapp)}`;
     const endereco = pedido.endereco_formatado || "-";
+    const pagamentoLabel = getPagamentoLabel(pedido);
+    const troco = pedido.troco_para ? `<br><small>Troco para ${money.format(Number(pedido.troco_para))}</small>` : "";
     const canCancel = pedido.status_pagamento !== "cancelado";
     const cancelButton = canCancel
       ? `<button class="danger-button compact-button" type="button" data-cancelar-pedido="${escapeHtml(pedido.codigo_compra)}">Cancelar</button>`
@@ -101,7 +111,7 @@ function renderAdminPedidos(data) {
         <td>${escapeHtml(pedido.codigo_compra)}</td>
         <td>${escapeHtml(pedido.nome)}</td>
         <td>${contato}</td>
-        <td><span class="status-badge ${escapeHtml(pedido.status_pagamento)}">${escapeHtml(pedido.status_pagamento)}</span></td>
+        <td><span class="status-badge ${escapeHtml(pedido.status_pagamento)}">${escapeHtml(pagamentoLabel)}</span>${troco}</td>
         <td>${pedido.entrega ? `Sim<br><small>${escapeHtml(endereco)}</small>` : "Não"}</td>
         <td>${escapeHtml(senhas)}</td>
         <td>${money.format(Number(pedido.valor_total || 0))}</td>

@@ -14,6 +14,8 @@ type ConsultaPayload = {
 
 type CompraConsulta = {
   status_pagamento: string;
+  forma_pagamento: string;
+  troco_para: number | string | null;
   quantidade: number;
   valor_total: number | string;
   entrega: boolean;
@@ -98,7 +100,7 @@ Deno.serve(async (req) => {
     if (codigoCompra) {
       const { data: compra, error } = await supabase
         .from("compras")
-        .select("status_pagamento,quantidade,valor_total,entrega,taxa_entrega,endereco_rua,endereco_numero,endereco_bairro,endereco_referencia,created_at,pdf_path")
+        .select("status_pagamento,forma_pagamento,troco_para,quantidade,valor_total,entrega,taxa_entrega,endereco_rua,endereco_numero,endereco_bairro,endereco_referencia,created_at,pdf_path")
         .eq("codigo_compra", codigoCompra)
         .maybeSingle<CompraConsulta>();
 
@@ -112,6 +114,8 @@ Deno.serve(async (req) => {
       const response: Record<string, unknown> = {
         tipo_consulta: "compra",
         status_pagamento: compra.status_pagamento,
+        forma_pagamento: compra.forma_pagamento,
+        troco_para: compra.troco_para,
         quantidade: compra.quantidade,
         valor_total: compra.valor_total,
         entrega: compra.entrega,
@@ -123,7 +127,7 @@ Deno.serve(async (req) => {
         created_at: compra.created_at,
       };
 
-      if (compra.status_pagamento === "pago" && compra.pdf_path) {
+      if (["pago", "dinheiro"].includes(compra.status_pagamento) && compra.pdf_path) {
         response.download_url = await createDownloadUrl(supabase, compra.pdf_path);
       }
 
@@ -132,7 +136,7 @@ Deno.serve(async (req) => {
 
     let query = supabase
       .from("compras")
-      .select("status_pagamento,quantidade,valor_total,entrega,taxa_entrega,endereco_rua,endereco_numero,endereco_bairro,endereco_referencia,created_at,pdf_path")
+      .select("status_pagamento,forma_pagamento,troco_para,quantidade,valor_total,entrega,taxa_entrega,endereco_rua,endereco_numero,endereco_bairro,endereco_referencia,created_at,pdf_path")
       .order("created_at", { ascending: false });
 
     if (email) {
@@ -151,7 +155,7 @@ Deno.serve(async (req) => {
     if (!compras?.length) return json({ error: "Compra não encontrada." }, 404);
 
     const comprasPagas = (compras as CompraConsulta[]).filter(
-      (compra) => compra.status_pagamento === "pago",
+      (compra) => ["pago", "dinheiro"].includes(compra.status_pagamento),
     );
     const quantidadeTotalPaga = comprasPagas.reduce(
       (total, compra) => total + Number(compra.quantidade ?? 0),

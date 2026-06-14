@@ -14,6 +14,8 @@ type Compra = {
   whatsapp: string;
   quantidade: number;
   valor_total: number;
+  forma_pagamento: string;
+  troco_para: number | null;
   entrega: boolean;
   taxa_entrega: number;
   endereco_rua: string | null;
@@ -76,19 +78,49 @@ function formatFicha(numero: number) {
   return String(numero).padStart(2, "0");
 }
 
-function formatEndereco(compra: Compra) {
-  if (!compra.entrega) return "Sem entrega. Retirada na UMEC.";
-  const endereco = [
-    compra.endereco_rua,
-    compra.endereco_numero ? `nº ${compra.endereco_numero}` : "",
-    compra.endereco_bairro,
-  ].filter(Boolean).join(", ");
-  const referencia = compra.endereco_referencia ? `Referência: ${compra.endereco_referencia}` : "";
-  return [endereco, referencia].filter(Boolean).join(" | ") || "Endereço não informado.";
+function formatPagamento(compra: Compra) {
+  if (compra.forma_pagamento === "dinheiro") {
+    const troco = compra.troco_para
+      ? ` - Troco para ${Number(compra.troco_para).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`
+      : "";
+    return `Dinheiro${troco}`;
+  }
+
+  return "Pix";
 }
 
-function truncate(value: string, max = 74) {
-  return value.length > max ? `${value.slice(0, max - 3)}...` : value;
+function formatEnderecoLinhas(compra: Compra) {
+  if (!compra.entrega) return ["Retirada na UMEC"];
+
+  const linhas = [
+    `Rua: ${compra.endereco_rua || "-"}`,
+    `Número: ${compra.endereco_numero || "-"}  Bairro: ${compra.endereco_bairro || "-"}`,
+  ];
+
+  if (compra.endereco_referencia) {
+    linhas.push(`Referência: ${compra.endereco_referencia}`);
+  }
+
+  return linhas;
+}
+
+function wrapText(text: string, maxChars: number) {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let current = "";
+
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > maxChars && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = next;
+    }
+  }
+
+  if (current) lines.push(current);
+  return lines;
 }
 
 async function gerarPdf(compra: Compra, senhas: Senha[]) {
@@ -121,31 +153,35 @@ async function gerarPdf(compra: Compra, senhas: Senha[]) {
     page.drawText("Entrega", { x: 72, y: height - 454, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
     page.drawText(compra.entrega ? "Sim" : "Não", { x: 142, y: height - 454, size: 12, font: fontBold, color: compra.entrega ? rgb(0.85, 0.08, 0.11) : rgb(0.1, 0.1, 0.1) });
     page.drawText(`Contato: ${compra.whatsapp}`, { x: 210, y: height - 454, size: 12, font, color: rgb(0.1, 0.1, 0.1) });
+    page.drawText(`Pagamento: ${formatPagamento(compra)}`, { x: 72, y: height - 478, size: 12, font, color: rgb(0.1, 0.1, 0.1) });
 
-    page.drawText("Data", { x: 72, y: height - 486, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
-    page.drawText(eventDate, { x: 72, y: height - 512, size: 16, font, color: rgb(0.1, 0.1, 0.1) });
+    page.drawText("Data", { x: 72, y: height - 510, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
+    page.drawText(eventDate, { x: 72, y: height - 536, size: 16, font, color: rgb(0.1, 0.1, 0.1) });
 
-    page.drawText("Local", { x: 72, y: height - 562, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
-    page.drawText(eventLocal, { x: 72, y: height - 588, size: 16, font, color: rgb(0.1, 0.1, 0.1) });
+    page.drawText("Local", { x: 72, y: height - 586, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
+    page.drawText(eventLocal, { x: 72, y: height - 612, size: 16, font, color: rgb(0.1, 0.1, 0.1) });
 
-    page.drawText("Horário", { x: 72, y: height - 638, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
-    page.drawText(eventHorario, { x: 72, y: height - 664, size: 16, font, color: rgb(0.1, 0.1, 0.1) });
+    page.drawText("Horário", { x: 72, y: height - 662, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
+    page.drawText(eventHorario, { x: 72, y: height - 688, size: 16, font, color: rgb(0.1, 0.1, 0.1) });
 
-    page.drawRectangle({ x: 72, y: 108, width: width - 144, height: 58, color: rgb(0.96, 0.96, 0.96) });
+    page.drawRectangle({ x: 72, y: 98, width: width - 144, height: 88, color: rgb(0.96, 0.96, 0.96) });
     page.drawText(compra.entrega ? "Endereço de entrega" : "Retirada na UMEC", {
       x: 92,
-      y: compra.entrega ? 142 : 132,
+      y: compra.entrega ? 164 : 136,
       size: 14,
       font: fontBold,
       color: rgb(0.1, 0.1, 0.1),
     });
     if (compra.entrega) {
-      page.drawText(truncate(formatEndereco(compra), 68), {
-        x: 92,
-        y: 120,
-        size: 11,
-        font,
-        color: rgb(0.1, 0.1, 0.1),
+      const enderecoLinhas = formatEnderecoLinhas(compra).flatMap((linha) => wrapText(linha, 68)).slice(0, 4);
+      enderecoLinhas.forEach((linha, index) => {
+        page.drawText(linha, {
+          x: 92,
+          y: 144 - (index * 16),
+          size: 10.5,
+          font,
+          color: rgb(0.1, 0.1, 0.1),
+        });
       });
     }
 
@@ -186,7 +222,7 @@ Deno.serve(async (req) => {
       .single<Compra>();
 
     if (compraError || !compra) return json({ error: "Compra não encontrada." }, 404);
-    if (compra.status_pagamento !== "pago") return json({ error: "Compra ainda não está paga." }, 409);
+    if (!["pago", "dinheiro"].includes(compra.status_pagamento)) return json({ error: "Compra ainda não está paga." }, 409);
     if (compra.pdf_path) return json({ pdf_path: compra.pdf_path, reused: true });
 
     const { data: senhas, error: senhasError } = await supabase.rpc("gerar_senhas_para_compra", {

@@ -11,6 +11,8 @@ type CompraPayload = {
   whatsapp?: string;
   email?: string;
   quantidade?: number;
+  forma_pagamento?: "pix" | "dinheiro";
+  troco_para?: number | string;
   entrega?: boolean;
   endereco_entrega?: {
     rua?: string;
@@ -53,6 +55,13 @@ function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
 }
 
+function parseMoneyValue(value: number | string | undefined) {
+  if (value === undefined || value === null || value === "") return null;
+  const normalized = String(value).replace(",", ".").trim();
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed > 0 ? Number(parsed.toFixed(2)) : null;
+}
+
 function getEstoqueTotal() {
   const raw = env("ESTOQUE_TOTAL").trim();
   if (!raw) return null;
@@ -70,6 +79,8 @@ function normalizePayload(payload: CompraPayload) {
   const whatsapp = onlyDigits(String(payload.whatsapp ?? ""));
   const email = String(payload.email ?? "").trim().toLowerCase();
   const quantidade = Number(payload.quantidade);
+  const formaPagamento = payload.forma_pagamento === "dinheiro" ? "dinheiro" : "pix";
+  const trocoPara = parseMoneyValue(payload.troco_para);
   const entrega = payload.entrega === true;
   const enderecoRua = String(payload.endereco_entrega?.rua ?? "").trim();
   const enderecoNumero = String(payload.endereco_entrega?.numero ?? "").trim();
@@ -88,7 +99,19 @@ function normalizePayload(payload: CompraPayload) {
     throw new Error("Informe rua, número e bairro para entrega.");
   }
 
-  return { nome, whatsapp, email, quantidade, entrega, enderecoRua, enderecoNumero, enderecoBairro, enderecoReferencia };
+  return {
+    nome,
+    whatsapp,
+    email,
+    quantidade,
+    formaPagamento,
+    trocoPara,
+    entrega,
+    enderecoRua,
+    enderecoNumero,
+    enderecoBairro,
+    enderecoReferencia,
+  };
 }
 
 function createCodigoCompra() {
@@ -114,7 +137,7 @@ async function assertEstoqueDisponivel(
   const { data, error } = await supabase
     .from("compras")
     .select("quantidade")
-    .in("status_pagamento", ["pendente", "pago"]);
+    .in("status_pagamento", ["pendente", "pago", "dinheiro"]);
 
   if (error) {
     console.error("Erro ao consultar estoque", error);
@@ -136,6 +159,139 @@ async function assertEstoqueDisponivel(
   }
 }
 
+async function gerarPdf(compraId: string, supabaseUrl: string, serviceRoleKey: string) {
+  const response = await fetch(`${supabaseUrl}/functions/v1/gerar-senhas-pdf`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${serviceRoleKey}`,
+      apikey: serviceRoleKey,
+    },
+    body: JSON.stringify({ compra_id: compraId }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.error("Erro ao gerar PDF para dinheiro", data);
+    throw new Error(data.error || "Não foi possível gerar o PDF.");
+  }
+
+  return data.pdf_path as string;
+}
+
+async function createDownloadUrl(supabase: ReturnType<typeof createClient>, pdfPath: string) {
+  const { data: signed, error } = await supabase.storage
+    .from("senhas-pdf")
+    .createSignedUrl(pdfPath, 60 * 15, { download: true });
+
+  if (error) {
+    console.error("Erro ao gerar URL assinada", error);
+    throw new Error("Não foi possível gerar o link de download.");
+  }
+
+  return signed.signedUrl;
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+
+  return btoa(binary);
+}
+
+function formatEndereco(compra: Record<string, unknown>) {
+  if (!compra.entrega) return "Retirada na UMEC";
+  const endereco = [
+    compra.endereco_rua,
+    compra.endereco_numero ? `nº ${compra.endereco_numero}` : "",
+    compra.endereco_bairro,
+  ].filter(Boolean).join(", ");
+  const referencia = compra.endereco_referencia ? `Referência: ${compra.endereco_referencia}` : "";
+  return [endereco, referencia].filter(Boolean).join(" | ") || "Endereço não informado";
+}
+
+async function sendResendEmail(resendApiKey: string, payload: Record<string, unknown>) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.error("Erro Resend", result);
+    throw new Error("Não foi possível enviar o e-mail.");
+  }
+
+  return result;
+}
+
+async function enviarEmailComPdf(
+  supabase: ReturnType<typeof createClient>,
+  compra: Record<string, unknown>,
+  pdfPath: string,
+) {
+  const resendApiKey = env("RESEND_API_KEY");
+  const fromEmail = env("RESEND_FROM_EMAIL");
+  const adminEmail = env("UMEC_ADMIN_EMAIL").trim();
+  if (!resendApiKey || !fromEmail || !adminEmail) return;
+
+  const { data: pdfFile, error: downloadError } = await supabase.storage
+    .from("senhas-pdf")
+    .download(pdfPath);
+
+  if (downloadError || !pdfFile) {
+    console.error("Erro ao baixar PDF para e-mail", downloadError);
+    return;
+  }
+
+  const content = arrayBufferToBase64(await pdfFile.arrayBuffer());
+  const valorTotal = Number(compra.valor_total).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+  const trocoPara = compra.troco_para
+    ? Number(compra.troco_para).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+    : "Não informado";
+
+  const adminText = [
+    "Novo pedido em dinheiro na Panqueca UMEC.",
+    "",
+    `Nome: ${compra.nome}`,
+    `E-mail: ${compra.email || "Não informado"}`,
+    `WhatsApp: ${compra.whatsapp}`,
+    `Código da compra: ${compra.codigo_compra}`,
+    `Quantidade de fichas: ${compra.quantidade}`,
+    `Entrega: ${compra.entrega ? "Sim" : "Não"}`,
+    `Endereço: ${formatEndereco(compra)}`,
+    `Valor total: ${valorTotal}`,
+    `Troco para: ${trocoPara}`,
+    "",
+    "O PDF da ficha está em anexo para conferência.",
+  ].join("\n");
+
+  await sendResendEmail(resendApiKey, {
+    from: fromEmail,
+    to: [adminEmail],
+    subject: `Pedido em dinheiro UMEC - ${compra.codigo_compra}`,
+    text: adminText,
+    attachments: [{ filename: `fichas-${compra.codigo_compra}.pdf`, content }],
+  });
+
+  await supabase
+    .from("compras")
+    .update({ email_enviado: true, email_enviado_at: new Date().toISOString() })
+    .eq("id", compra.id);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
@@ -150,7 +306,7 @@ Deno.serve(async (req) => {
     const payerEmailFallback = env("UMEC_ADMIN_EMAIL", "ph493591@gmail.com").trim();
     const eventoNome = env("EVENTO_NOME", "Refeição UMEC");
 
-    if (!supabaseUrl || !serviceRoleKey || !mercadoPagoToken) {
+    if (!supabaseUrl || !serviceRoleKey) {
       return json({ error: "Variáveis de ambiente do servidor não configuradas." }, 500);
     }
 
@@ -163,11 +319,20 @@ Deno.serve(async (req) => {
     }
 
     const payload = normalizePayload(await req.json());
+    if (payload.formaPagamento === "pix" && !mercadoPagoToken) {
+      return json({ error: "Token do Mercado Pago não configurado." }, 500);
+    }
+
     const payerEmail = payload.email || payerEmailFallback;
     const taxaEntrega = payload.entrega ? taxaEntregaPadrao : 0;
     const valorTotal = Number(((payload.quantidade * valorUnitario) + taxaEntrega).toFixed(2));
+    if (payload.formaPagamento === "dinheiro" && payload.trocoPara && payload.trocoPara <= valorTotal) {
+      return json({ error: "O valor para troco deve ser maior que o total do pedido." }, 400);
+    }
+
     const codigoCompra = createCodigoCompra();
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const statusPagamento = payload.formaPagamento === "dinheiro" ? "dinheiro" : "pendente";
 
     await assertEstoqueDisponivel(supabase, payload.quantidade, estoqueTotal);
 
@@ -180,13 +345,15 @@ Deno.serve(async (req) => {
         quantidade: payload.quantidade,
         valor_unitario: valorUnitario,
         valor_total: valorTotal,
+        forma_pagamento: payload.formaPagamento,
+        troco_para: payload.formaPagamento === "dinheiro" ? payload.trocoPara : null,
         entrega: payload.entrega,
         taxa_entrega: taxaEntrega,
         endereco_rua: payload.entrega ? payload.enderecoRua : null,
         endereco_numero: payload.entrega ? payload.enderecoNumero : null,
         endereco_bairro: payload.entrega ? payload.enderecoBairro : null,
         endereco_referencia: payload.entrega ? payload.enderecoReferencia : null,
-        status_pagamento: "pendente",
+        status_pagamento: statusPagamento,
         codigo_compra: codigoCompra,
       })
       .select()
@@ -195,6 +362,32 @@ Deno.serve(async (req) => {
     if (insertError || !compra) {
       console.error("Erro ao criar compra", insertError);
       return json({ error: "Não foi possível registrar a compra." }, 500);
+    }
+
+    if (payload.formaPagamento === "dinheiro") {
+      const pdfPath = await gerarPdf(compra.id, supabaseUrl, serviceRoleKey);
+      const downloadUrl = await createDownloadUrl(supabase, pdfPath);
+
+      try {
+        await enviarEmailComPdf(supabase, { ...compra, pdf_path: pdfPath }, pdfPath);
+      } catch (emailError) {
+        console.error("Pedido em dinheiro confirmado, mas o e-mail não foi enviado", emailError);
+      }
+
+      return json({
+        codigo_compra: codigoCompra,
+        valor_total: valorTotal,
+        forma_pagamento: "dinheiro",
+        troco_para: payload.trocoPara,
+        entrega: payload.entrega,
+        taxa_entrega: taxaEntrega,
+        endereco_rua: payload.entrega ? payload.enderecoRua : null,
+        endereco_numero: payload.entrega ? payload.enderecoNumero : null,
+        endereco_bairro: payload.entrega ? payload.enderecoBairro : null,
+        endereco_referencia: payload.entrega ? payload.enderecoReferencia : null,
+        status_pagamento: "dinheiro",
+        download_url: downloadUrl,
+      });
     }
 
     const { firstName, lastName } = splitName(payload.nome);
@@ -263,6 +456,7 @@ Deno.serve(async (req) => {
       qr_code: qrCode,
       qr_code_base64: qrCodeBase64,
       valor_total: valorTotal,
+      forma_pagamento: "pix",
       entrega: payload.entrega,
       taxa_entrega: taxaEntrega,
       endereco_rua: payload.entrega ? payload.enderecoRua : null,

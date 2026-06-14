@@ -19,12 +19,12 @@
         <div class="header-copy">
           <span class="eyebrow">Panqueca UMEC</span>
           <h1>Garanta sua ficha</h1>
-          <p>Compra por Pix com confirmação automática e ficha em PDF.</p>
+          <p>Compra por Pix com confirmação automática ou pagamento em dinheiro na entrega/retirada.</p>
           <div class="header-pills" aria-label="Resumo da compra">
             <span>R$ 10,00 cada</span>
             <span>Entrega + R$ 2,00</span>
-            <span>Pix</span>
-            <span>PDF após pagamento</span>
+            <span>Pix ou dinheiro</span>
+            <span>PDF após confirmação</span>
           </div>
         </div>
         <details class="header-menu">
@@ -113,6 +113,31 @@
           <div class="total-breakdown" aria-live="polite">
             <span>Panquecas: <strong id="subtotal-panquecas">R$ 10,00</strong></span>
             <span id="taxa-entrega-linha" class="hidden">Entrega: <strong id="taxa-entrega">R$ 2,00</strong></span>
+          </div>
+
+          <fieldset class="payment-methods">
+            <legend>Forma de pagamento</legend>
+            <label class="payment-option">
+              <input type="radio" name="forma_pagamento" value="pix" checked />
+              <span>
+                <strong>Pix</strong>
+                <small>Gera QR Code e libera o PDF automaticamente após o pagamento.</small>
+              </span>
+            </label>
+            <label class="payment-option">
+              <input type="radio" name="forma_pagamento" value="dinheiro" />
+              <span>
+                <strong>Dinheiro</strong>
+                <small>Confirma o pedido agora e registra para pagamento em dinheiro.</small>
+              </span>
+            </label>
+          </fieldset>
+
+          <div id="dinheiro-box" class="cash-box hidden">
+            <label>
+              <span class="field-title">Troco para <span class="optional-label">Opcional</span></span>
+              <input id="troco-para" name="troco_para" type="text" inputmode="decimal" placeholder="Ex: 20,00" />
+            </label>
           </div>
 
           <div class="total-box" aria-live="polite">

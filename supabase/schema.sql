@@ -7,6 +7,26 @@ create sequence if not exists public.senha_numero_seq
   no maxvalue
   cache 1;
 
+create or replace function public.reset_senha_numero_seq()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_max integer;
+begin
+  select coalesce(max(numero_senha), 0) into v_max
+  from public.senhas;
+
+  if v_max <= 0 then
+    perform setval('public.senha_numero_seq', 1, false);
+  else
+    perform setval('public.senha_numero_seq', v_max, true);
+  end if;
+end;
+$$;
+
 create table if not exists public.compras (
   id uuid primary key default gen_random_uuid(),
   nome text not null,
@@ -15,6 +35,8 @@ create table if not exists public.compras (
   quantidade integer not null check (quantidade > 0),
   valor_unitario numeric(10, 2) not null,
   valor_total numeric(10, 2) not null,
+  forma_pagamento text not null default 'pix',
+  troco_para numeric(10, 2),
   entrega boolean not null default false,
   taxa_entrega numeric(10, 2) not null default 0,
   endereco_rua text,
@@ -32,7 +54,9 @@ create table if not exists public.compras (
   created_at timestamp default now(),
   updated_at timestamp default now(),
   constraint compras_status_pagamento_check
-    check (status_pagamento in ('pendente', 'pago', 'cancelado', 'erro'))
+    check (status_pagamento in ('pendente', 'pago', 'dinheiro', 'cancelado', 'erro')),
+  constraint compras_forma_pagamento_check
+    check (forma_pagamento in ('pix', 'dinheiro'))
 );
 
 create table if not exists public.senhas (
@@ -47,12 +71,24 @@ create table if not exists public.senhas (
 );
 
 alter table public.compras
+  add column if not exists forma_pagamento text not null default 'pix',
+  add column if not exists troco_para numeric(10, 2),
   add column if not exists entrega boolean not null default false,
   add column if not exists taxa_entrega numeric(10, 2) not null default 0,
   add column if not exists endereco_rua text,
   add column if not exists endereco_numero text,
   add column if not exists endereco_bairro text,
   add column if not exists endereco_referencia text;
+
+alter table public.compras
+  drop constraint if exists compras_status_pagamento_check,
+  add constraint compras_status_pagamento_check
+    check (status_pagamento in ('pendente', 'pago', 'dinheiro', 'cancelado', 'erro'));
+
+alter table public.compras
+  drop constraint if exists compras_forma_pagamento_check,
+  add constraint compras_forma_pagamento_check
+    check (forma_pagamento in ('pix', 'dinheiro'));
 
 create index if not exists idx_compras_codigo_compra on public.compras (codigo_compra);
 create index if not exists idx_compras_email on public.compras (lower(email));
@@ -106,7 +142,7 @@ begin
     raise exception 'Compra não encontrada';
   end if;
 
-  if v_compra.status_pagamento <> 'pago' then
+  if v_compra.status_pagamento not in ('pago', 'dinheiro') then
     raise exception 'Compra ainda não está paga';
   end if;
 

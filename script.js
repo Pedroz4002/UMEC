@@ -31,11 +31,15 @@ const totalEl = byId("valor-total");
 const subtotalPanquecasEl = byId("subtotal-panquecas");
 const taxaEntregaEl = byId("taxa-entrega");
 const taxaEntregaLinha = byId("taxa-entrega-linha");
+const formaPagamentoInputs = Array.from(document.querySelectorAll('input[name="forma_pagamento"]'));
+const dinheiroBox = byId("dinheiro-box");
+const trocoParaInput = byId("troco-para");
 const compraMsg = byId("compra-mensagem");
 const consultaMsg = byId("consulta-mensagem");
 const pixArea = byId("pix-area");
 const consultaResultado = byId("consulta-resultado");
 const baixarPdf = byId("baixar-pdf");
+const pixTitulo = byId("pix-titulo");
 const pixStatus = byId("pix-status");
 const pixStatusTitle = byId("pix-status-title");
 const pixStatusText = byId("pix-status-text");
@@ -114,6 +118,17 @@ function onlyDigits(value) {
   return String(value || "").replace(/\D/g, "");
 }
 
+function parseMoneyInput(value) {
+  const normalized = String(value || "").replace(",", ".").trim();
+  if (!normalized) return "";
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed.toFixed(2) : "";
+}
+
+function getFormaPagamento() {
+  return formaPagamentoInputs.find((input) => input.checked)?.value || "pix";
+}
+
 function formatPhonePreview(value) {
   const digits = onlyDigits(value);
   if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
@@ -149,6 +164,13 @@ function updateEntregaState() {
   entregaReferenciaInput.required = false;
   entregaTelefonePreview.textContent = formatPhonePreview(byId("whatsapp").value);
   updateTotal();
+}
+
+function updatePaymentMethod() {
+  const isDinheiro = getFormaPagamento() === "dinheiro";
+  dinheiroBox.classList.toggle("hidden", !isDinheiro);
+  trocoParaInput.disabled = !isDinheiro;
+  byId("gerar-pix").textContent = isDinheiro ? "Confirmar pedido" : "Gerar Pix";
 }
 
 function validateFrontendConfig() {
@@ -210,6 +232,7 @@ function showPix(data, formData) {
   ultimaCompra = { ...data, ...formData };
 
   stopPaymentWatcher();
+  pixTitulo.textContent = "Pix gerado";
   byId("codigo-compra").textContent = data.codigo_compra;
   byId("pix-copia-cola").value = data.qr_code;
   byId("pix-qrcode").src = `data:image/png;base64,${data.qr_code_base64}`;
@@ -235,6 +258,25 @@ function showPaymentApproved(data) {
   setMessage(compraMsg, "Pagamento realizado. PDF disponível para download.", "success");
 }
 
+function showCashConfirmed(data, formData) {
+  ultimaCompra = { ...data, ...formData };
+  stopPaymentWatcher();
+  pixTitulo.textContent = "Pedido confirmado";
+  byId("codigo-compra").textContent = data.codigo_compra;
+  pixPaymentDetails.classList.add("hidden");
+  pixPaymentActions.classList.add("hidden");
+  pixDownloadPdf.href = data.download_url;
+  pixDownloadPdf.classList.toggle("hidden", !data.download_url);
+  setPixStatus(
+    "success",
+    "Pedido em dinheiro confirmado",
+    "Suas fichas foram registradas. Separe o pagamento em dinheiro no dia ou na entrega.",
+  );
+  pixArea.classList.remove("hidden");
+  pixArea.scrollIntoView({ behavior: "smooth", block: "start" });
+  setMessage(compraMsg, "Pedido em dinheiro confirmado. PDF disponível para download.", "success");
+}
+
 async function checkPaymentStatus({ showPending = false } = {}) {
   if (!ultimaCompra?.codigo_compra) return false;
 
@@ -242,12 +284,14 @@ async function checkPaymentStatus({ showPending = false } = {}) {
     codigo_compra: ultimaCompra.codigo_compra,
   });
 
-  if (data.status_pagamento === "pago" && data.download_url) {
+  const isConfirmado = ["pago", "dinheiro"].includes(data.status_pagamento);
+
+  if (isConfirmado && data.download_url) {
     showPaymentApproved(data);
     return true;
   }
 
-  if (data.status_pagamento === "pago") {
+  if (isConfirmado) {
     setPixStatus("preparing", "Pagamento Realizado", "Estamos preparando o PDF. O botão de download aparece em instantes.");
     pixPaymentDetails.classList.add("hidden");
     pixPaymentActions.classList.add("hidden");
@@ -283,11 +327,14 @@ compraForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const button = byId("gerar-pix");
+  const formaPagamento = getFormaPagamento();
   const formData = {
     nome: byId("nome").value.trim(),
     whatsapp: onlyDigits(byId("whatsapp").value),
     email: byId("email").value.trim().toLowerCase(),
     quantidade: Number(quantidadeInput.value),
+    forma_pagamento: formaPagamento,
+    troco_para: formaPagamento === "dinheiro" ? parseMoneyInput(trocoParaInput.value) : "",
     entrega: entregaInput.checked,
     endereco_entrega: getEnderecoEntrega(),
   };
@@ -307,13 +354,23 @@ compraForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  setLoading(button, true, "Gerando Pix...");
+  const totalPedido = (formData.quantidade * CONFIG.VALOR_UNITARIO) + (formData.entrega ? CONFIG.TAXA_ENTREGA : 0);
+  if (formData.forma_pagamento === "dinheiro" && formData.troco_para && Number(formData.troco_para) <= totalPedido) {
+    setMessage(compraMsg, "O valor para troco deve ser maior que o total do pedido.", "error");
+    return;
+  }
+
+  setLoading(button, true, formaPagamento === "dinheiro" ? "Confirmando..." : "Gerando Pix...");
   setMessage(compraMsg, "");
 
   try {
     const data = await callFunction("criar-pagamento", formData);
-    showPix(data, formData);
-    setMessage(compraMsg, "Pix gerado com sucesso. A confirmação será acompanhada por até 15 minutos.", "success");
+    if (data.forma_pagamento === "dinheiro") {
+      showCashConfirmed(data, formData);
+    } else {
+      showPix(data, formData);
+      setMessage(compraMsg, "Pix gerado com sucesso. A confirmação será acompanhada por até 15 minutos.", "success");
+    }
   } catch (error) {
     setMessage(compraMsg, error.message, "error");
   } finally {
@@ -406,14 +463,16 @@ consultaForm.addEventListener("submit", async (event) => {
       return;
     }
 
-    const isPago = data.status_pagamento === "pago";
+    const isPago = ["pago", "dinheiro"].includes(data.status_pagamento);
 
     byId("resultado-status-label").textContent = "Status";
     byId("resultado-quantidade-label").textContent = "Quantidade";
     byId("resultado-total-label").textContent = "Valor total";
     byId("resultado-data-label").textContent = "Criada em";
 
-    byId("resultado-status").textContent = isPago ? "Pagamento confirmado" : "Pagamento ainda não confirmado";
+    byId("resultado-status").textContent = isPago
+      ? (data.status_pagamento === "dinheiro" ? "Pedido em dinheiro confirmado" : "Pagamento confirmado")
+      : "Pagamento ainda não confirmado";
     byId("resultado-quantidade").textContent = data.quantidade || "-";
     byId("resultado-total").textContent = data.valor_total ? money.format(Number(data.valor_total)) : "-";
     byId("resultado-entrega").textContent = data.entrega ? "Sim" : "Não";
@@ -430,7 +489,7 @@ consultaForm.addEventListener("submit", async (event) => {
     }
 
     consultaResultado.classList.remove("hidden");
-    setMessage(consultaMsg, isPago ? "Pagamento confirmado." : "Pagamento ainda não confirmado.", isPago ? "success" : "");
+    setMessage(consultaMsg, isPago ? "Pedido confirmado." : "Pagamento ainda não confirmado.", isPago ? "success" : "");
   } catch (error) {
     setMessage(consultaMsg, error.message, "error");
   } finally {
@@ -441,6 +500,8 @@ consultaForm.addEventListener("submit", async (event) => {
 quantidadeInput.addEventListener("input", updateTotal);
 entregaInput.addEventListener("change", updateEntregaState);
 byId("whatsapp").addEventListener("input", updateEntregaState);
+formaPagamentoInputs.forEach((input) => input.addEventListener("change", updatePaymentMethod));
 setEventoInfo();
 updateEntregaState();
+updatePaymentMethod();
 setWhatsappContato();
