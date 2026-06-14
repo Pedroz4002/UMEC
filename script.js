@@ -52,7 +52,7 @@ let paymentPollTimer = null;
 let paymentPollDeadline = 0;
 
 const PAYMENT_POLL_INTERVAL_MS = 10000;
-const PAYMENT_POLL_TIMEOUT_MS = 15 * 60 * 1000;
+const PAYMENT_POLL_TIMEOUT_MS = 10 * 60 * 1000;
 
 function setEventoInfo() {
   document.querySelectorAll("[data-evento-nome]").forEach((element) => {
@@ -241,7 +241,7 @@ function showPix(data, formData) {
   pixDownloadPdf.removeAttribute("href");
   pixPaymentDetails.classList.remove("hidden");
   pixPaymentActions.classList.remove("hidden");
-  setPixStatus("pending", "Aguardando pagamento", "Depois que o Pix for pago, a confirmação aparece aqui automaticamente por até 15 minutos.");
+  setPixStatus("pending", "Aguardando pagamento", "Depois que o Pix for pago, a confirmação aparece aqui automaticamente por até 10 minutos.");
 
   pixArea.classList.remove("hidden");
   pixArea.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -369,7 +369,7 @@ compraForm.addEventListener("submit", async (event) => {
       showCashConfirmed(data, formData);
     } else {
       showPix(data, formData);
-      setMessage(compraMsg, "Pix gerado com sucesso. A confirmação será acompanhada por até 15 minutos.", "success");
+      setMessage(compraMsg, "Pix gerado com sucesso. A confirmação será acompanhada por até 10 minutos.", "success");
     }
   } catch (error) {
     setMessage(compraMsg, error.message, "error");

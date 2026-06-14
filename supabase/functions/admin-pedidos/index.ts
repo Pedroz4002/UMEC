@@ -174,9 +174,9 @@ function getEstoqueTotal() {
 }
 
 function getPixExpirationMinutes() {
-  const raw = env("PIX_EXPIRATION_MINUTES", "15").trim();
+  const raw = env("PIX_EXPIRATION_MINUTES", "10").trim();
   const minutes = Number(raw);
-  if (!Number.isFinite(minutes) || minutes < 1) return 15;
+  if (!Number.isFinite(minutes) || minutes < 1) return 10;
   return Math.min(Math.floor(minutes), 60);
 }
 
