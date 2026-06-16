@@ -1,0 +1,93 @@
+GUIA RAPIDO DO SITE UMEC
+Atualizado em 16/06/2026
+
+1. index.html
+Tela principal do site.
+Aqui ficam os textos visiveis, campos do formulario, botao flutuante do WhatsApp, link do Admin, area do Pix e area de consulta.
+Para mudar textos da tela, procure o texto dentro desse arquivo.
+O campo de quantidade esta limitado em max="100".
+
+2. style.css
+Visual do site.
+Aqui ficam cores, espacamentos, botoes, layout de celular, menu, tabelas do Admin e botao flutuante do WhatsApp.
+Se quiser mudar cor principal, veja as variaveis no inicio do arquivo, principalmente --brand, --brand-dark e --ok.
+
+3. script.js
+Logica da tela principal.
+Aqui ficam calculo de total, entrega, dinheiro, troco, consulta de compra, Pix, verificacao automatica e botao do WhatsApp.
+Se mudar textos de mensagem apos Pix ou consulta, procure por setMessage ou setPixStatus.
+
+4. admin.html
+Estrutura da tela Admin.
+Tem login, resumo de fichas, botoes de PDF, backup por e-mail e a tela "Fichas em tempo real".
+O Admin abre na mesma aba do navegador pelo link do menu principal.
+
+5. admin.js
+Logica do Admin.
+Aqui ficam login, listagem de pedidos, cancelar pedido, baixar PDF geral, PDF de entregas, enviar backup por e-mail e marcar ficha como entregue.
+A tela "Fichas em tempo real" atualiza a cada 30 segundos.
+
+6. assets/logo-umec.png
+Logomarca usada no topo do site.
+Para trocar a logo, substitua esse arquivo mantendo o mesmo nome.
+
+7. supabase/schema.sql
+Estrutura do banco de dados.
+Tem as tabelas compras e senhas, a sequencia das fichas e a funcao que gera as fichas pagas.
+Use com cuidado. Alterar o banco errado pode apagar ou quebrar pedidos.
+
+8. supabase/functions/criar-pagamento/index.ts
+Funcao que cria pedido.
+Valida nome, WhatsApp, e-mail opcional, quantidade, entrega, dinheiro ou Pix.
+Tambem aplica estoque, valor da panqueca, taxa de entrega e tempo limite do Pix.
+
+9. supabase/functions/webhook-mercadopago/index.ts
+Funcao chamada pelo Mercado Pago quando o Pix e pago.
+Confirma a compra, gera o PDF e envia o PDF para o Gmail configurado no Admin.
+
+10. supabase/functions/gerar-senhas-pdf/index.ts
+Funcao que gera o PDF individual da compra.
+Mostra as fichas, dados do comprador, entrega/retirada, endereco quando houver entrega e pagamento.
+
+11. supabase/functions/admin-pedidos/index.ts
+Funcao do Admin.
+Lista pedidos, cancela pedido, gera PDF geral, gera PDF de entregas, lista fichas em tempo real, marca ficha como entregue e envia backup ZIP por e-mail.
+
+12. Variaveis importantes no Supabase
+VALOR_UNITARIO=10.00
+TAXA_ENTREGA=2.00
+ESTOQUE_TOTAL=100
+PIX_EXPIRATION_MINUTES=10
+WHATSAPP_UMEC=5583998465279
+UMEC_ADMIN_EMAIL=ph493591@gmail.com
+ADMIN_USER=UMEC
+ADMIN_PASSWORD=UMEC2026
+RESEND_API_KEY=chave do Resend
+RESEND_FROM_EMAIL=e-mail remetente aprovado no Resend
+MERCADO_PAGO_ACCESS_TOKEN=token do Mercado Pago
+MERCADO_PAGO_WEBHOOK_URL=url publica do webhook
+
+13. Como publicar alteracoes
+Depois de editar o site, envie para o GitHub:
+git add .
+git commit -m "Mensagem da alteracao"
+git push origin main
+
+Depois de editar funcoes Supabase, publique a funcao alterada:
+npx supabase functions deploy criar-pagamento
+npx supabase functions deploy webhook-mercadopago --no-verify-jwt
+npx supabase functions deploy gerar-senhas-pdf
+npx supabase functions deploy admin-pedidos
+
+14. Cuidados
+Nao coloque token secreto dentro de index.html, script.js, admin.html ou admin.js.
+Esses arquivos ficam publicos no GitHub Pages.
+Segredos devem ficar somente em Supabase > Edge Functions > Secrets.
+
+15. Uso no dia
+Abra o Admin, entre com usuario UMEC e senha UMEC2026.
+Use "Fichas em tempo real" para acompanhar a producao.
+Marque "Entregue" quando a ficha for entregue.
+Use "PDF de entregas" para separar pedidos de entrega.
+Use "Baixar PDF geral" para conferencia geral.
+Use "Enviar backup por e-mail" para receber ZIP com banco e PDFs.

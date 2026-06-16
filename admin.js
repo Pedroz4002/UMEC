@@ -17,8 +17,14 @@ const adminPedidosBody = byId("admin-pedidos-body");
 const adminResumo = byId("admin-resumo");
 const adminFichasVendidas = byId("admin-fichas-vendidas");
 const adminFichasDisponiveis = byId("admin-fichas-disponiveis");
+const adminPedidosView = byId("admin-pedidos-view");
+const adminRealtimeView = byId("admin-realtime-view");
+const adminRealtimeStatus = byId("admin-realtime-status");
+const adminFichasBody = byId("admin-fichas-body");
 
 let adminSession = null;
+let realtimeRefreshTimer = null;
+const REALTIME_REFRESH_MS = 30 * 1000;
 
 function setMessage(element, text, type = "") {
   element.textContent = text;
@@ -83,6 +89,47 @@ function getPagamentoLabel(pedido) {
   return pedido.status_pagamento;
 }
 
+function renderFichasTempoReal(data) {
+  const fichas = data.fichas || [];
+  const updatedAt = new Date().toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  adminRealtimeStatus.textContent = `${fichas.length} ficha(s) confirmada(s). Última atualização: ${updatedAt}`;
+
+  if (!fichas.length) {
+    adminFichasBody.innerHTML = '<tr><td colspan="8">Nenhuma ficha paga ou em dinheiro encontrada.</td></tr>';
+    return;
+  }
+
+  adminFichasBody.innerHTML = fichas.map((ficha) => {
+    const tipo = ficha.entrega ? "Entrega" : "Retirada";
+    const endereco = ficha.entrega ? ficha.endereco_formatado : "-";
+    const pagamento = ficha.forma_pagamento === "dinheiro" ? "Dinheiro" : "Pix pago";
+    const checked = ficha.entregue ? "checked" : "";
+    const status = ficha.entregue ? "Entregue" : "Pendente";
+
+    return `
+      <tr>
+        <td><strong>${escapeHtml(ficha.numero_senha_formatado)}</strong></td>
+        <td>${escapeHtml(ficha.nome)}</td>
+        <td>${escapeHtml(ficha.whatsapp_formatado || ficha.whatsapp)}</td>
+        <td><span class="status-badge ${ficha.entrega ? "dinheiro" : "pago"}">${tipo}</span></td>
+        <td>${escapeHtml(endereco)}</td>
+        <td>${escapeHtml(pagamento)}</td>
+        <td>${escapeHtml(ficha.codigo_compra)}</td>
+        <td>
+          <label class="realtime-check">
+            <input type="checkbox" data-marcar-entregue="${escapeHtml(ficha.id)}" ${checked} />
+            <span>${status}</span>
+          </label>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
 function renderAdminPedidos(data) {
   const pedidos = data.pedidos || [];
   adminResumo.textContent = `${pedidos.length} pedido(s) | ${data.total_fichas_pagas || 0} ficha(s) paga(s)`;
@@ -121,6 +168,30 @@ function renderAdminPedidos(data) {
   }).join("");
 }
 
+async function loadFichasTempoReal() {
+  setMessage(adminMsg, "Carregando fichas em tempo real...");
+  const data = await callAdmin("fichas");
+  renderFichasTempoReal(data);
+  setMessage(adminMsg, "Fichas em tempo real carregadas.", "success");
+}
+
+async function openRealtimeView() {
+  adminPedidosView.classList.add("hidden");
+  adminRealtimeView.classList.remove("hidden");
+  await loadFichasTempoReal();
+  clearInterval(realtimeRefreshTimer);
+  realtimeRefreshTimer = setInterval(() => {
+    loadFichasTempoReal().catch((error) => setMessage(adminMsg, error.message, "error"));
+  }, REALTIME_REFRESH_MS);
+}
+
+function closeRealtimeView() {
+  clearInterval(realtimeRefreshTimer);
+  realtimeRefreshTimer = null;
+  adminRealtimeView.classList.add("hidden");
+  adminPedidosView.classList.remove("hidden");
+}
+
 async function loadAdminPedidos() {
   setMessage(adminMsg, "Carregando pedidos...");
   const data = await callAdmin("list");
@@ -150,6 +221,55 @@ byId("admin-refresh").addEventListener("click", async () => {
     await loadAdminPedidos();
   } catch (error) {
     setMessage(adminMsg, error.message, "error");
+  }
+});
+
+byId("admin-fichas-tempo-real").addEventListener("click", async () => {
+  try {
+    await openRealtimeView();
+  } catch (error) {
+    setMessage(adminMsg, error.message, "error");
+  }
+});
+
+byId("admin-realtime-refresh").addEventListener("click", async () => {
+  const button = byId("admin-realtime-refresh");
+  setLoading(button, true, "Atualizando...");
+  try {
+    await loadFichasTempoReal();
+  } catch (error) {
+    setMessage(adminMsg, error.message, "error");
+  } finally {
+    setLoading(button, false);
+  }
+});
+
+byId("admin-realtime-back").addEventListener("click", async () => {
+  closeRealtimeView();
+  try {
+    await loadAdminPedidos();
+  } catch (error) {
+    setMessage(adminMsg, error.message, "error");
+  }
+});
+
+byId("admin-backup-email").addEventListener("click", async () => {
+  const button = byId("admin-backup-email");
+  const confirmed = window.confirm("Enviar um backup ZIP com dados e PDFs para o e-mail configurado?");
+  if (!confirmed) return;
+
+  setLoading(button, true, "Enviando...");
+  try {
+    const data = await callAdmin("backup");
+    setMessage(
+      adminMsg,
+      `Backup enviado para ${data.email}. ${data.compras} pedido(s), ${data.senhas} ficha(s) e ${data.arquivos_storage} arquivo(s) do storage.`,
+      "success",
+    );
+  } catch (error) {
+    setMessage(adminMsg, error.message, "error");
+  } finally {
+    setLoading(button, false);
   }
 });
 
@@ -216,5 +336,24 @@ adminPedidosBody.addEventListener("click", async (event) => {
     setMessage(adminMsg, error.message, "error");
   } finally {
     setLoading(button, false);
+  }
+});
+
+adminFichasBody.addEventListener("change", async (event) => {
+  const checkbox = event.target.closest("[data-marcar-entregue]");
+  if (!checkbox) return;
+
+  checkbox.disabled = true;
+  const senhaId = checkbox.dataset.marcarEntregue;
+  const entregue = checkbox.checked;
+  try {
+    await callAdmin("marcar_entregue", { senha_id: senhaId, entregue });
+    setMessage(adminMsg, entregue ? "Ficha marcada como entregue." : "Ficha marcada como pendente.", "success");
+    await loadFichasTempoReal();
+  } catch (error) {
+    checkbox.checked = !entregue;
+    setMessage(adminMsg, error.message, "error");
+  } finally {
+    checkbox.disabled = false;
   }
 });

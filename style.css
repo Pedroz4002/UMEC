@@ -713,6 +713,11 @@ textarea:focus {
   margin-top: 18px;
 }
 
+.admin-view {
+  display: grid;
+  gap: 18px;
+}
+
 .admin-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -772,6 +777,10 @@ textarea:focus {
   font-size: 0.92rem;
 }
 
+.realtime-table {
+  min-width: 980px;
+}
+
 .admin-table th,
 .admin-table td {
   border-bottom: 1px solid var(--line);
@@ -814,6 +823,22 @@ textarea:focus {
 .status-badge.pendente {
   background: #fff7e6;
   color: #9a5b00;
+}
+
+.realtime-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 132px;
+  color: var(--text);
+  font-weight: 800;
+}
+
+.realtime-check input {
+  width: 22px;
+  min-height: 22px;
+  padding: 0;
+  accent-color: var(--ok);
 }
 
 .hidden {

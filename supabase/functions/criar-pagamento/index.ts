@@ -63,7 +63,7 @@ function parseMoneyValue(value: number | string | undefined) {
 }
 
 function getEstoqueTotal() {
-  const raw = env("ESTOQUE_TOTAL").trim();
+  const raw = env("ESTOQUE_TOTAL", "100").trim();
   if (!raw) return null;
 
   const estoqueTotal = Number(raw);
@@ -99,8 +99,8 @@ function normalizePayload(payload: CompraPayload) {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new Error("Informe um e-mail válido ou deixe o campo em branco.");
   }
-  if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > 50) {
-    throw new Error("Informe uma quantidade entre 1 e 50.");
+  if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > 100) {
+    throw new Error("Informe uma quantidade entre 1 e 100.");
   }
   if (entrega && (!enderecoRua || !enderecoNumero || !enderecoBairro)) {
     throw new Error("Informe rua, número e bairro para entrega.");

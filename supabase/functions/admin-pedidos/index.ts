@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { strToU8, zipSync } from "https://esm.sh/fflate@0.8.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,8 +11,10 @@ const corsHeaders = {
 type AdminPayload = {
   usuario?: string;
   senha?: string;
-  action?: "list" | "pdf" | "pdf_entregas" | "cancel";
+  action?: "list" | "pdf" | "pdf_entregas" | "cancel" | "fichas" | "marcar_entregue" | "backup";
   codigo_compra?: string;
+  senha_id?: string;
+  entregue?: boolean;
 };
 
 type Compra = {
@@ -35,10 +38,13 @@ type Compra = {
 };
 
 type Senha = {
+  id?: string;
   compra_id: string;
   numero_senha: number;
   nome: string;
   whatsapp?: string;
+  usada?: boolean;
+  created_at?: string;
 };
 
 type LinhaPdf = {
@@ -169,8 +175,8 @@ function wrapTextByWidth(
 }
 
 function getEstoqueTotal() {
-  const estoqueTotal = Number(env("ESTOQUE_TOTAL", "50"));
-  return Number.isInteger(estoqueTotal) && estoqueTotal > 0 ? estoqueTotal : 50;
+  const estoqueTotal = Number(env("ESTOQUE_TOTAL", "100"));
+  return Number.isInteger(estoqueTotal) && estoqueTotal > 0 ? estoqueTotal : 100;
 }
 
 function getPixExpirationMinutes() {
@@ -406,6 +412,255 @@ async function getLinhasPdf(supabase: ReturnType<typeof createClient>, somenteEn
     .filter(Boolean) as LinhaPdf[];
 }
 
+function uint8ArrayToBase64(bytes: Uint8Array) {
+  let binary = "";
+  const chunkSize = 0x8000;
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+
+  return btoa(binary);
+}
+
+function csvCell(value: unknown) {
+  const normalized = value === null || value === undefined ? "" : String(value);
+  return `"${normalized.replaceAll('"', '""')}"`;
+}
+
+function toCsv(rows: Array<Record<string, unknown>>) {
+  const keys = Array.from(rows.reduce((set, row) => {
+    Object.keys(row).forEach((key) => set.add(key));
+    return set;
+  }, new Set<string>()));
+
+  if (!keys.length) return "";
+
+  const header = keys.map(csvCell).join(",");
+  const body = rows.map((row) => keys.map((key) => csvCell(row[key])).join(","));
+  return [header, ...body].join("\n");
+}
+
+function sanitizeZipPath(path: string) {
+  return path
+    .replaceAll("\\", "/")
+    .replace(/^\/+/, "")
+    .replaceAll("../", "")
+    .replaceAll("..", "_");
+}
+
+async function sendResendEmail(resendApiKey: string, payload: Record<string, unknown>) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.error("Erro Resend", result);
+    throw new Error("Não foi possível enviar o e-mail.");
+  }
+
+  return result;
+}
+
+async function collectStorageFiles(
+  supabase: ReturnType<typeof createClient>,
+  files: Record<string, Uint8Array>,
+  prefix = "",
+) {
+  const { data, error } = await supabase.storage
+    .from("senhas-pdf")
+    .list(prefix, { limit: 1000, sortBy: { column: "name", order: "asc" } });
+
+  if (error) {
+    console.error("Erro ao listar arquivos do storage para backup", { prefix, error });
+    return 0;
+  }
+
+  let count = 0;
+  for (const item of data ?? []) {
+    const path = prefix ? `${prefix}/${item.name}` : item.name;
+    const { data: blob, error: downloadError } = await supabase.storage
+      .from("senhas-pdf")
+      .download(path);
+
+    if (!downloadError && blob) {
+      files[`storage/senhas-pdf/${sanitizeZipPath(path)}`] = new Uint8Array(await blob.arrayBuffer());
+      count += 1;
+      continue;
+    }
+
+    count += await collectStorageFiles(supabase, files, path);
+  }
+
+  return count;
+}
+
+async function gerarBackupEnviarEmail(supabase: ReturnType<typeof createClient>) {
+  const { data: compras, error: comprasError } = await supabase
+    .from("compras")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (comprasError) {
+    console.error("Erro ao buscar compras para backup", comprasError);
+    throw new Error("Não foi possível gerar o backup das compras.");
+  }
+
+  const { data: senhas, error: senhasError } = await supabase
+    .from("senhas")
+    .select("*")
+    .order("numero_senha", { ascending: true });
+
+  if (senhasError) {
+    console.error("Erro ao buscar fichas para backup", senhasError);
+    throw new Error("Não foi possível gerar o backup das fichas.");
+  }
+
+  const comprasRows = (compras ?? []) as Array<Record<string, unknown>>;
+  const senhasRows = (senhas ?? []) as Array<Record<string, unknown>>;
+  const resumo = {
+    gerado_em: new Date().toISOString(),
+    total_pedidos: comprasRows.length,
+    total_fichas: senhasRows.length,
+    total_pagos: comprasRows.filter((compra) => ["pago", "dinheiro"].includes(String(compra.status_pagamento))).length,
+    total_cancelados: comprasRows.filter((compra) => compra.status_pagamento === "cancelado").length,
+  };
+
+  const files: Record<string, Uint8Array> = {
+    "banco/compras.json": strToU8(JSON.stringify(comprasRows, null, 2)),
+    "banco/compras.csv": strToU8(toCsv(comprasRows)),
+    "banco/senhas.json": strToU8(JSON.stringify(senhasRows, null, 2)),
+    "banco/senhas.csv": strToU8(toCsv(senhasRows)),
+    "banco/resumo.json": strToU8(JSON.stringify(resumo, null, 2)),
+  };
+
+  const arquivosStorage = await collectStorageFiles(supabase, files);
+  const zipBytes = zipSync(files, { level: 6 });
+  const resendApiKey = env("RESEND_API_KEY");
+  const fromEmail = env("RESEND_FROM_EMAIL");
+  const adminEmail = env("UMEC_ADMIN_EMAIL", "ph493591@gmail.com").trim();
+
+  if (!resendApiKey || !fromEmail || !adminEmail) {
+    throw new Error("Resend ou e-mail do Admin não configurado.");
+  }
+
+  const filename = `backup-umec-${new Date().toISOString().slice(0, 10)}.zip`;
+  await sendResendEmail(resendApiKey, {
+    from: fromEmail,
+    to: [adminEmail],
+    subject: "Backup UMEC - banco de dados e PDFs",
+    text: [
+      "Backup do sistema UMEC em anexo.",
+      "",
+      `Pedidos no banco: ${comprasRows.length}`,
+      `Fichas no banco: ${senhasRows.length}`,
+      `Arquivos do storage: ${arquivosStorage}`,
+      "",
+      "Guarde este arquivo em local seguro.",
+    ].join("\n"),
+    attachments: [{ filename, content: uint8ArrayToBase64(zipBytes) }],
+  });
+
+  return {
+    email: adminEmail,
+    compras: comprasRows.length,
+    senhas: senhasRows.length,
+    arquivos_storage: arquivosStorage,
+    tamanho_zip_bytes: zipBytes.byteLength,
+  };
+}
+
+async function getFichasTempoReal(supabase: ReturnType<typeof createClient>) {
+  const { data: compras, error: comprasError } = await supabase
+    .from("compras")
+    .select("id,codigo_compra,nome,email,whatsapp,valor_total,forma_pagamento,troco_para,entrega,endereco_rua,endereco_numero,endereco_bairro,endereco_referencia,status_pagamento,created_at")
+    .in("status_pagamento", ["pago", "dinheiro"])
+    .order("created_at", { ascending: true });
+
+  if (comprasError) {
+    console.error("Erro ao buscar compras para tempo real", comprasError);
+    throw new Error("Não foi possível carregar as fichas em tempo real.");
+  }
+
+  const comprasPorId = new Map<string, Compra>();
+  for (const compra of (compras ?? []) as Compra[]) {
+    comprasPorId.set(compra.id, compra);
+  }
+
+  const compraIds = Array.from(comprasPorId.keys());
+  if (!compraIds.length) return { fichas: [], total: 0 };
+
+  const { data: senhas, error: senhasError } = await supabase
+    .from("senhas")
+    .select("id,compra_id,numero_senha,nome,whatsapp,usada,created_at")
+    .in("compra_id", compraIds)
+    .order("numero_senha", { ascending: true });
+
+  if (senhasError) {
+    console.error("Erro ao buscar fichas para tempo real", senhasError);
+    throw new Error("Não foi possível carregar as fichas em tempo real.");
+  }
+
+  const fichas = ((senhas ?? []) as Senha[])
+    .map((senha) => {
+      const compra = comprasPorId.get(senha.compra_id);
+      if (!compra) return null;
+      return {
+        id: senha.id,
+        numero_senha: senha.numero_senha,
+        numero_senha_formatado: formatFicha(senha.numero_senha),
+        nome: senha.nome || compra.nome,
+        whatsapp: senha.whatsapp || compra.whatsapp,
+        whatsapp_formatado: formatPhone(senha.whatsapp || compra.whatsapp),
+        codigo_compra: compra.codigo_compra,
+        status_pagamento: compra.status_pagamento,
+        forma_pagamento: compra.forma_pagamento,
+        troco_para: compra.troco_para === null ? null : Number(compra.troco_para),
+        entrega: compra.entrega,
+        endereco_formatado: formatEndereco(compra),
+        valor_total: Number(compra.valor_total ?? 0),
+        entregue: Boolean(senha.usada),
+        created_at: senha.created_at,
+      };
+    })
+    .filter(Boolean);
+
+  return { fichas, total: fichas.length };
+}
+
+async function marcarFichaEntregue(
+  supabase: ReturnType<typeof createClient>,
+  senhaId: string,
+  entregue: boolean,
+) {
+  const id = senhaId.trim();
+  if (!id) throw new Error("Ficha não informada.");
+
+  const { data, error } = await supabase
+    .from("senhas")
+    .update({ usada: entregue })
+    .eq("id", id)
+    .select("id,numero_senha,usada")
+    .single();
+
+  if (error || !data) {
+    console.error("Erro ao marcar ficha como entregue", error);
+    throw new Error("Não foi possível atualizar a ficha.");
+  }
+
+  return {
+    id: data.id,
+    numero_senha: formatFicha(Number(data.numero_senha)),
+    entregue: Boolean(data.usada),
+  };
+}
+
 async function gerarPdfGeral(supabase: ReturnType<typeof createClient>, somenteEntregas = false) {
   const linhas = await getLinhasPdf(supabase, somenteEntregas);
   const pdf = await PDFDocument.create();
@@ -606,6 +861,19 @@ Deno.serve(async (req) => {
     if (payload.action === "cancel") {
       const cancelado = await cancelarPedido(supabase, String(payload.codigo_compra ?? ""));
       return json({ ok: true, pedido: cancelado });
+    }
+
+    if (payload.action === "fichas") {
+      return json(await getFichasTempoReal(supabase));
+    }
+
+    if (payload.action === "marcar_entregue") {
+      const ficha = await marcarFichaEntregue(supabase, String(payload.senha_id ?? ""), payload.entregue === true);
+      return json({ ok: true, ficha });
+    }
+
+    if (payload.action === "backup") {
+      return json(await gerarBackupEnviarEmail(supabase));
     }
 
     if (payload.action === "pdf" || payload.action === "pdf_entregas") {

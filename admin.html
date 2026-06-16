@@ -55,16 +55,19 @@
             </div>
             <div>
               <span>Fichas disponíveis</span>
-              <strong id="admin-fichas-disponiveis">50</strong>
+              <strong id="admin-fichas-disponiveis">100</strong>
             </div>
           </div>
 
+          <section id="admin-pedidos-view" class="admin-view">
           <div class="admin-actions">
             <div>
               <strong id="admin-resumo">0 pedidos</strong>
               <span>Pedidos em ordem de criação</span>
             </div>
             <button class="secondary-button compact-button" id="admin-refresh" type="button">Atualizar</button>
+            <button class="secondary-button compact-button" id="admin-fichas-tempo-real" type="button">Fichas em tempo real</button>
+            <button class="secondary-button compact-button" id="admin-backup-email" type="button">Enviar backup por e-mail</button>
             <button class="primary-button compact-button" id="admin-pdf" type="button">Baixar PDF geral</button>
             <button class="secondary-button compact-button" id="admin-pdf-entregas" type="button">PDF de entregas</button>
           </div>
@@ -87,6 +90,36 @@
               <tbody id="admin-pedidos-body"></tbody>
             </table>
           </div>
+          </section>
+
+          <section id="admin-realtime-view" class="admin-view hidden">
+            <div class="admin-actions">
+              <div>
+                <strong>Fichas em tempo real</strong>
+                <span id="admin-realtime-status">Atualiza automaticamente a cada 30 segundos</span>
+              </div>
+              <button class="secondary-button compact-button" id="admin-realtime-refresh" type="button">Atualizar agora</button>
+              <button class="ghost-button compact-button" id="admin-realtime-back" type="button">Voltar aos pedidos</button>
+            </div>
+
+            <div class="admin-table-wrap">
+              <table class="admin-table realtime-table">
+                <thead>
+                  <tr>
+                    <th>Ficha</th>
+                    <th>Nome</th>
+                    <th>Contato</th>
+                    <th>Tipo</th>
+                    <th>Endereço</th>
+                    <th>Pagamento</th>
+                    <th>Pedido</th>
+                    <th>Entregue</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-fichas-body"></tbody>
+              </table>
+            </div>
+          </section>
         </div>
       </section>
     </main>
