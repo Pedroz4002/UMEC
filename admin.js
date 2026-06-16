@@ -275,14 +275,19 @@ byId("admin-backup-email").addEventListener("click", async () => {
 
 byId("admin-backup-limpar").addEventListener("click", async () => {
   const button = byId("admin-backup-limpar");
-  const confirmed = window.confirm(
-    "Compactar pedidos e PDFs, enviar para o e-mail configurado e limpar o banco de dados?\n\nEssa ação apaga pedidos, fichas e PDFs do Storage depois do backup enviado.",
+  const confirmationText = window.prompt(
+    "Essa ação vai compactar pedidos e PDFs, enviar para o e-mail configurado e depois limpar o banco de dados.\n\nPara confirmar, digite exatamente: UMEC",
   );
-  if (!confirmed) return;
+
+  if (confirmationText === null) return;
+  if (confirmationText.trim() !== "UMEC") {
+    setMessage(adminMsg, "Confirmação incorreta. Digite UMEC para liberar a limpeza.", "error");
+    return;
+  }
 
   setLoading(button, true, "Limpando...");
   try {
-    const data = await callAdmin("backup_limpar");
+    const data = await callAdmin("backup_limpar", { confirmacao_limpeza: "UMEC" });
     setMessage(
       adminMsg,
       `Backup enviado para ${data.backup.email}. Banco limpo: ${data.limpeza.compras_removidas} pedido(s), ${data.limpeza.senhas_removidas} ficha(s) e ${data.limpeza.arquivos_storage_removidos} arquivo(s).`,

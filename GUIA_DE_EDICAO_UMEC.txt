@@ -92,4 +92,5 @@ Use "PDF de entregas" para separar pedidos de entrega.
 Use "Baixar PDF geral" para conferencia geral.
 Use "Enviar backup por e-mail" para receber ZIP com banco e PDFs.
 Use "Backup e limpar banco" somente quando quiser arquivar tudo por e-mail e zerar pedidos, fichas e PDFs antigos.
+Ao apertar esse botao, digite exatamente UMEC para confirmar a limpeza.
 Depois desse botao, a proxima ficha volta a comecar em 01.

@@ -15,6 +15,7 @@ type AdminPayload = {
   codigo_compra?: string;
   senha_id?: string;
   entregue?: boolean;
+  confirmacao_limpeza?: string;
 };
 
 type Compra = {
@@ -965,6 +966,9 @@ Deno.serve(async (req) => {
     }
 
     if (payload.action === "backup_limpar") {
+      if (String(payload.confirmacao_limpeza ?? "").trim() !== "UMEC") {
+        return json({ error: "Digite UMEC para confirmar a limpeza do banco." }, 400);
+      }
       return json(await gerarBackupEnviarEmailELimpar(supabase));
     }
 
