@@ -273,6 +273,30 @@ byId("admin-backup-email").addEventListener("click", async () => {
   }
 });
 
+byId("admin-backup-limpar").addEventListener("click", async () => {
+  const button = byId("admin-backup-limpar");
+  const confirmed = window.confirm(
+    "Compactar pedidos e PDFs, enviar para o e-mail configurado e limpar o banco de dados?\n\nEssa ação apaga pedidos, fichas e PDFs do Storage depois do backup enviado.",
+  );
+  if (!confirmed) return;
+
+  setLoading(button, true, "Limpando...");
+  try {
+    const data = await callAdmin("backup_limpar");
+    setMessage(
+      adminMsg,
+      `Backup enviado para ${data.backup.email}. Banco limpo: ${data.limpeza.compras_removidas} pedido(s), ${data.limpeza.senhas_removidas} ficha(s) e ${data.limpeza.arquivos_storage_removidos} arquivo(s).`,
+      "success",
+    );
+    closeRealtimeView();
+    await loadAdminPedidos();
+  } catch (error) {
+    setMessage(adminMsg, error.message, "error");
+  } finally {
+    setLoading(button, false);
+  }
+});
+
 byId("admin-pdf").addEventListener("click", async () => {
   const button = byId("admin-pdf");
   setLoading(button, true, "Gerando PDF...");

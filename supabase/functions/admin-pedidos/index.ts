@@ -11,7 +11,7 @@ const corsHeaders = {
 type AdminPayload = {
   usuario?: string;
   senha?: string;
-  action?: "list" | "pdf" | "pdf_entregas" | "cancel" | "fichas" | "marcar_entregue" | "backup";
+  action?: "list" | "pdf" | "pdf_entregas" | "cancel" | "fichas" | "marcar_entregue" | "backup" | "backup_limpar";
   codigo_compra?: string;
   senha_id?: string;
   entregue?: boolean;
@@ -501,6 +501,37 @@ async function collectStorageFiles(
   return count;
 }
 
+async function collectStoragePaths(
+  supabase: ReturnType<typeof createClient>,
+  prefix = "",
+) {
+  const { data, error } = await supabase.storage
+    .from("senhas-pdf")
+    .list(prefix, { limit: 1000, sortBy: { column: "name", order: "asc" } });
+
+  if (error) {
+    console.error("Erro ao listar arquivos do storage para limpeza", { prefix, error });
+    return [] as string[];
+  }
+
+  const paths: string[] = [];
+  for (const item of data ?? []) {
+    const path = prefix ? `${prefix}/${item.name}` : item.name;
+    const { data: blob, error: downloadError } = await supabase.storage
+      .from("senhas-pdf")
+      .download(path);
+
+    if (!downloadError && blob) {
+      paths.push(path);
+      continue;
+    }
+
+    paths.push(...await collectStoragePaths(supabase, path));
+  }
+
+  return paths;
+}
+
 async function gerarBackupEnviarEmail(supabase: ReturnType<typeof createClient>) {
   const { data: compras, error: comprasError } = await supabase
     .from("compras")
@@ -574,6 +605,63 @@ async function gerarBackupEnviarEmail(supabase: ReturnType<typeof createClient>)
     arquivos_storage: arquivosStorage,
     tamanho_zip_bytes: zipBytes.byteLength,
   };
+}
+
+async function limparBancoPedidos(supabase: ReturnType<typeof createClient>) {
+  const storagePaths = await collectStoragePaths(supabase);
+  let arquivosStorageRemovidos = 0;
+
+  for (let i = 0; i < storagePaths.length; i += 100) {
+    const chunk = storagePaths.slice(i, i + 100);
+    const { error } = await supabase.storage
+      .from("senhas-pdf")
+      .remove(chunk);
+
+    if (error) {
+      console.error("Erro ao remover PDFs do storage", { chunk, error });
+      throw new Error("Não foi possível remover todos os PDFs antigos.");
+    }
+
+    arquivosStorageRemovidos += chunk.length;
+  }
+
+  const { count: senhasRemovidas, error: senhasError } = await supabase
+    .from("senhas")
+    .delete({ count: "exact" })
+    .not("id", "is", null);
+
+  if (senhasError) {
+    console.error("Erro ao limpar fichas", senhasError);
+    throw new Error("Não foi possível limpar as fichas.");
+  }
+
+  const { count: comprasRemovidas, error: comprasError } = await supabase
+    .from("compras")
+    .delete({ count: "exact" })
+    .not("id", "is", null);
+
+  if (comprasError) {
+    console.error("Erro ao limpar compras", comprasError);
+    throw new Error("Não foi possível limpar os pedidos.");
+  }
+
+  const { error: resetSeqError } = await supabase.rpc("reset_senha_numero_seq");
+  if (resetSeqError) {
+    console.error("Erro ao resetar sequência das fichas", resetSeqError);
+    throw new Error("Pedidos removidos, mas não foi possível resetar a numeração das fichas.");
+  }
+
+  return {
+    compras_removidas: comprasRemovidas ?? 0,
+    senhas_removidas: senhasRemovidas ?? 0,
+    arquivos_storage_removidos: arquivosStorageRemovidos,
+  };
+}
+
+async function gerarBackupEnviarEmailELimpar(supabase: ReturnType<typeof createClient>) {
+  const backup = await gerarBackupEnviarEmail(supabase);
+  const limpeza = await limparBancoPedidos(supabase);
+  return { backup, limpeza };
 }
 
 async function getFichasTempoReal(supabase: ReturnType<typeof createClient>) {
@@ -874,6 +962,10 @@ Deno.serve(async (req) => {
 
     if (payload.action === "backup") {
       return json(await gerarBackupEnviarEmail(supabase));
+    }
+
+    if (payload.action === "backup_limpar") {
+      return json(await gerarBackupEnviarEmailELimpar(supabase));
     }
 
     if (payload.action === "pdf" || payload.action === "pdf_entregas") {
