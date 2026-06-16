@@ -253,26 +253,6 @@ byId("admin-realtime-back").addEventListener("click", async () => {
   }
 });
 
-byId("admin-backup-email").addEventListener("click", async () => {
-  const button = byId("admin-backup-email");
-  const confirmed = window.confirm("Enviar um backup ZIP com dados e PDFs para o e-mail configurado?");
-  if (!confirmed) return;
-
-  setLoading(button, true, "Enviando...");
-  try {
-    const data = await callAdmin("backup");
-    setMessage(
-      adminMsg,
-      `Backup enviado para ${data.email}. ${data.compras} pedido(s), ${data.senhas} ficha(s) e ${data.arquivos_storage} arquivo(s) do storage.`,
-      "success",
-    );
-  } catch (error) {
-    setMessage(adminMsg, error.message, "error");
-  } finally {
-    setLoading(button, false);
-  }
-});
-
 byId("admin-backup-limpar").addEventListener("click", async () => {
   const button = byId("admin-backup-limpar");
   const confirmationText = window.prompt(
