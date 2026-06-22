@@ -876,15 +876,27 @@ async function cancelarPedido(supabase: ReturnType<typeof createClient>, codigoC
     throw new Error("Pedido nao encontrado.");
   }
 
+  const paymentId = String(compra.mercado_pago_payment_id ?? "");
+  let mercadoPagoCancelado: boolean | null = null;
+  let mercadoPagoStatus = "";
+
   if (compra.status_pagamento === "cancelado") {
-    if (compra.mercado_pago_payment_id) {
-      await cancelMercadoPagoPayment(String(compra.mercado_pago_payment_id));
+    if (paymentId) {
+      mercadoPagoCancelado = await cancelMercadoPagoPayment(paymentId);
+      mercadoPagoStatus = await getMercadoPagoPaymentStatus(paymentId);
     }
-    return { codigo_compra: compra.codigo_compra, status_pagamento: "cancelado", already_cancelled: true };
+    return {
+      codigo_compra: compra.codigo_compra,
+      status_pagamento: "cancelado",
+      already_cancelled: true,
+      mercado_pago_cancelado: mercadoPagoCancelado,
+      mercado_pago_status: mercadoPagoStatus,
+    };
   }
 
-  if (compra.status_pagamento === "pendente" && compra.mercado_pago_payment_id) {
-    await cancelMercadoPagoPayment(String(compra.mercado_pago_payment_id));
+  if (compra.status_pagamento === "pendente" && paymentId) {
+    mercadoPagoCancelado = await cancelMercadoPagoPayment(paymentId);
+    mercadoPagoStatus = await getMercadoPagoPaymentStatus(paymentId);
   }
 
   const { error: senhasError } = await supabase
@@ -927,7 +939,13 @@ async function cancelarPedido(supabase: ReturnType<typeof createClient>, codigoC
     throw new Error("Nao foi possivel cancelar o pedido.");
   }
 
-  return { codigo_compra: compra.codigo_compra, status_pagamento: "cancelado", already_cancelled: false };
+  return {
+    codigo_compra: compra.codigo_compra,
+    status_pagamento: "cancelado",
+    already_cancelled: false,
+    mercado_pago_cancelado: mercadoPagoCancelado,
+    mercado_pago_status: mercadoPagoStatus,
+  };
 }
 
 Deno.serve(async (req) => {

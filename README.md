@@ -38,7 +38,7 @@ O schema cria:
 
 - tabela `compras`
 - tabela `senhas`
-- sequence `senha_numero_seq` começando em `1001`
+- sequence `senha_numero_seq` começando em `1`
 - função segura `gerar_senhas_para_compra`
 - índices
 - constraint de status
@@ -67,12 +67,14 @@ MERCADO_PAGO_ACCESS_TOKEN=
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=
 WHATSAPP_UMEC=
-VALOR_UNITARIO=12.00
-ESTOQUE_TOTAL=
-EVENTO_NOME=Refeição UMEC
-EVENTO_DATA=
-EVENTO_LOCAL=
-EVENTO_HORARIO=
+VALOR_UNITARIO=10.00
+TAXA_ENTREGA=2.00
+ESTOQUE_TOTAL=100
+PIX_EXPIRATION_MINUTES=10
+EVENTO_NOME=Panqueca UMEC
+EVENTO_DATA=A definir
+EVENTO_LOCAL=UMEC Tancredo Neves
+EVENTO_HORARIO=A definir
 MERCADO_PAGO_WEBHOOK_URL=
 ```
 
@@ -86,11 +88,14 @@ supabase secrets set MERCADO_PAGO_ACCESS_TOKEN="SEU_ACCESS_TOKEN"
 supabase secrets set RESEND_API_KEY="SUA_RESEND_API_KEY"
 supabase secrets set RESEND_FROM_EMAIL="UMEC <senhas@seudominio.com>"
 supabase secrets set WHATSAPP_UMEC="5599999999999"
-supabase secrets set VALOR_UNITARIO="12.00"
-supabase secrets set EVENTO_NOME="Refeição UMEC"
-supabase secrets set EVENTO_DATA="DD/MM/AAAA"
+supabase secrets set VALOR_UNITARIO="10.00"
+supabase secrets set TAXA_ENTREGA="2.00"
+supabase secrets set ESTOQUE_TOTAL="100"
+supabase secrets set PIX_EXPIRATION_MINUTES="10"
+supabase secrets set EVENTO_NOME="Panqueca UMEC"
+supabase secrets set EVENTO_DATA="A definir"
 supabase secrets set EVENTO_LOCAL="UMEC Tancredo Neves"
-supabase secrets set EVENTO_HORARIO="12h"
+supabase secrets set EVENTO_HORARIO="A definir"
 supabase secrets set MERCADO_PAGO_WEBHOOK_URL="https://SEU-PROJETO.supabase.co/functions/v1/webhook-mercadopago"
 ```
 
@@ -102,8 +107,8 @@ Edite `script.js` e troque:
 SUPABASE_URL: "https://SEU-PROJETO.supabase.co",
 SUPABASE_ANON_KEY: "SUA_SUPABASE_ANON_KEY",
 WHATSAPP_UMEC: "5599999999999",
-VALOR_UNITARIO: 12.0,
-EVENTO_NOME: "Refeição UMEC",
+VALOR_UNITARIO: 10.0,
+EVENTO_NOME: "Panqueca UMEC",
 EVENTO_DATA: "A definir",
 EVENTO_LOCAL: "UMEC Tancredo Neves",
 EVENTO_HORARIO: "A definir",

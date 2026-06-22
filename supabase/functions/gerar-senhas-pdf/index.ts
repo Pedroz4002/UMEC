@@ -161,10 +161,10 @@ async function gerarPdf(compra: Compra, senhas: Senha[]) {
     page.drawText("Local", { x: 72, y: height - 586, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
     page.drawText(eventLocal, { x: 72, y: height - 612, size: 16, font, color: rgb(0.1, 0.1, 0.1) });
 
-    page.drawText("Horário", { x: 72, y: height - 662, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
-    page.drawText(eventHorario, { x: 72, y: height - 688, size: 16, font, color: rgb(0.1, 0.1, 0.1) });
+    page.drawText("Horário", { x: 72, y: height - 636, size: 12, font: fontBold, color: rgb(0.36, 0.39, 0.44) });
+    page.drawText(eventHorario, { x: 72, y: height - 660, size: 16, font, color: rgb(0.1, 0.1, 0.1) });
 
-    page.drawRectangle({ x: 72, y: 98, width: width - 144, height: 88, color: rgb(0.96, 0.96, 0.96) });
+    page.drawRectangle({ x: 72, y: 92, width: width - 144, height: 76, color: rgb(0.96, 0.96, 0.96) });
     page.drawText(compra.entrega ? "Endereço de entrega" : "Retirada na UMEC", {
       x: 92,
       y: compra.entrega ? 164 : 136,
