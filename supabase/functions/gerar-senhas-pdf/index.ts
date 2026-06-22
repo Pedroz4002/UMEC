@@ -129,7 +129,7 @@ async function gerarPdf(compra: Compra, senhas: Senha[]) {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const eventName = env("EVENTO_NOME", "Panqueca UMEC");
   const eventDate = formatDate(env("EVENTO_DATA"));
-  const eventLocal = formatDate(env("EVENTO_LOCAL", "UMEC Tancredo Neves"));
+  const eventLocal = formatDate(env("EVENTO_LOCAL", "IEC Tancredo Neves"));
   const eventHorario = formatDate(env("EVENTO_HORARIO"));
 
   for (const senha of senhas) {
