@@ -63,7 +63,7 @@ function parseMoneyValue(value: number | string | undefined) {
 }
 
 function getEstoqueTotal() {
-  const raw = env("ESTOQUE_TOTAL", "100").trim();
+  const raw = env("ESTOQUE_TOTAL", "75").trim();
   if (!raw) return null;
 
   const estoqueTotal = Number(raw);
@@ -81,7 +81,7 @@ function getPixExpirationMinutes() {
   return Math.min(Math.floor(minutes), 60);
 }
 
-function normalizePayload(payload: CompraPayload) {
+function normalizePayload(payload: CompraPayload, maxQuantidade: number) {
   const nome = String(payload.nome ?? "").trim();
   const whatsapp = onlyDigits(String(payload.whatsapp ?? ""));
   const email = String(payload.email ?? "").trim().toLowerCase();
@@ -99,8 +99,8 @@ function normalizePayload(payload: CompraPayload) {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new Error("Informe um e-mail válido ou deixe o campo em branco.");
   }
-  if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > 100) {
-    throw new Error("Informe uma quantidade entre 1 e 100.");
+  if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > maxQuantidade) {
+    throw new Error(`Informe uma quantidade entre 1 e ${maxQuantidade}.`);
   }
   if (entrega && (!enderecoRua || !enderecoNumero || !enderecoBairro)) {
     throw new Error("Informe rua, número e bairro para entrega.");
@@ -405,7 +405,7 @@ Deno.serve(async (req) => {
       return json({ error: "TAXA_ENTREGA inválida." }, 500);
     }
 
-    const payload = normalizePayload(await req.json());
+    const payload = normalizePayload(await req.json(), estoqueTotal ?? 75);
     if (payload.formaPagamento === "pix" && !mercadoPagoToken) {
       return json({ error: "Token do Mercado Pago não configurado." }, 500);
     }

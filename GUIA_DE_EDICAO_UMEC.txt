@@ -56,7 +56,7 @@ Lista pedidos, cancela pedido, gera PDF geral, gera PDF de entregas, lista ficha
 12. Variaveis importantes no Supabase
 VALOR_UNITARIO=10.00
 TAXA_ENTREGA=2.00
-ESTOQUE_TOTAL=100
+ESTOQUE_TOTAL=75
 PIX_EXPIRATION_MINUTES=10
 WHATSAPP_UMEC=5583998465279
 UMEC_ADMIN_EMAIL=ph493591@gmail.com
