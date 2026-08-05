@@ -5,7 +5,7 @@ const CONFIG = {
   VALOR_UNITARIO: 10.0,
   TAXA_ENTREGA: 2.0,
   EVENTO_NOME: "Panqueca UMEC",
-  EVENTO_DATA: "02/08/2026",
+  EVENTO_DATA: "08/08/2026",
   EVENTO_LOCAL: "IEC Tancredo Neves",
   EVENTO_HORARIO: "A definir",
 };

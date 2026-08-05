@@ -72,7 +72,7 @@ TAXA_ENTREGA=2.00
 ESTOQUE_TOTAL=75
 PIX_EXPIRATION_MINUTES=10
 EVENTO_NOME=Panqueca UMEC
-EVENTO_DATA=02/08/2026
+EVENTO_DATA=08/08/2026
 EVENTO_LOCAL=IEC Tancredo Neves
 EVENTO_HORARIO=A definir
 MERCADO_PAGO_WEBHOOK_URL=
@@ -93,7 +93,7 @@ supabase secrets set TAXA_ENTREGA="2.00"
 supabase secrets set ESTOQUE_TOTAL="75"
 supabase secrets set PIX_EXPIRATION_MINUTES="10"
 supabase secrets set EVENTO_NOME="Panqueca UMEC"
-supabase secrets set EVENTO_DATA="02/08/2026"
+supabase secrets set EVENTO_DATA="08/08/2026"
 supabase secrets set EVENTO_LOCAL="IEC Tancredo Neves"
 supabase secrets set EVENTO_HORARIO="A definir"
 supabase secrets set MERCADO_PAGO_WEBHOOK_URL="https://SEU-PROJETO.supabase.co/functions/v1/webhook-mercadopago"
@@ -109,7 +109,7 @@ SUPABASE_ANON_KEY: "SUA_SUPABASE_ANON_KEY",
 WHATSAPP_UMEC: "5599999999999",
 VALOR_UNITARIO: 10.0,
 EVENTO_NOME: "Panqueca UMEC",
-EVENTO_DATA: "02/08/2026",
+EVENTO_DATA: "08/08/2026",
 EVENTO_LOCAL: "IEC Tancredo Neves",
 EVENTO_HORARIO: "A definir",
 ```
