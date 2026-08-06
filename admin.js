@@ -104,7 +104,7 @@ function renderFichasTempoReal(data) {
   }
 
   adminFichasBody.innerHTML = fichas.map((ficha) => {
-    const tipo = ficha.entrega ? "Entrega" : "Retirada";
+    const tipo = ficha.entrega ? "Delivery" : "Sem delivery";
     const endereco = ficha.entrega ? ficha.endereco_formatado : "-";
     const pagamento = ficha.forma_pagamento === "dinheiro" ? "Dinheiro" : "Pix pago";
     const checked = ficha.entregue ? "checked" : "";

@@ -118,7 +118,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer) {
 }
 
 function formatEndereco(compra: Compra) {
-  if (!compra.entrega) return "Retirada na UMEC";
+  if (!compra.entrega) return "Delivery sem endereço informado";
   const endereco = [
     compra.endereco_rua,
     compra.endereco_numero ? `nº ${compra.endereco_numero}` : "",

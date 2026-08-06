@@ -38,7 +38,7 @@ Use com cuidado. Alterar o banco errado pode apagar ou quebrar pedidos.
 
 8. supabase/functions/criar-pagamento/index.ts
 Funcao que cria pedido.
-Valida nome, WhatsApp, e-mail opcional, quantidade, entrega, dinheiro ou Pix.
+Valida nome, WhatsApp, e-mail opcional, quantidade, delivery obrigatorio, dinheiro ou Pix.
 Tambem aplica estoque, valor da panqueca, taxa de entrega e tempo limite do Pix.
 
 9. supabase/functions/webhook-mercadopago/index.ts
@@ -47,7 +47,7 @@ Confirma a compra, gera o PDF e envia o PDF para o Gmail configurado no Admin.
 
 10. supabase/functions/gerar-senhas-pdf/index.ts
 Funcao que gera o PDF individual da compra.
-Mostra as fichas, dados do comprador, entrega/retirada, endereco quando houver entrega e pagamento.
+Mostra as fichas, dados do comprador, delivery, endereco e pagamento.
 
 11. supabase/functions/admin-pedidos/index.ts
 Funcao do Admin.

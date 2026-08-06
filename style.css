@@ -335,6 +335,16 @@ label {
   accent-color: var(--brand);
 }
 
+.delivery-required {
+  cursor: default;
+  border-color: rgba(217, 22, 31, 0.22);
+  background: #fff7f7;
+}
+
+.delivery-required input {
+  display: none;
+}
+
 .delivery-toggle span {
   display: grid;
   gap: 3px;

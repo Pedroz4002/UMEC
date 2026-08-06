@@ -90,7 +90,7 @@ function formatPagamento(compra: Compra) {
 }
 
 function formatEnderecoLinhas(compra: Compra) {
-  if (!compra.entrega) return ["Retirada na UMEC"];
+  if (!compra.entrega) return ["Delivery sem endereço informado"];
 
   const linhas = [
     `Rua: ${compra.endereco_rua || "-"}`,
@@ -165,7 +165,7 @@ async function gerarPdf(compra: Compra, senhas: Senha[]) {
     page.drawText(eventHorario, { x: 72, y: height - 660, size: 16, font, color: rgb(0.1, 0.1, 0.1) });
 
     page.drawRectangle({ x: 72, y: 92, width: width - 144, height: 76, color: rgb(0.96, 0.96, 0.96) });
-    page.drawText(compra.entrega ? "Endereço de entrega" : "Retirada na UMEC", {
+    page.drawText(compra.entrega ? "Endereço de entrega" : "Delivery sem endereço informado", {
       x: 92,
       y: compra.entrega ? 164 : 136,
       size: 14,

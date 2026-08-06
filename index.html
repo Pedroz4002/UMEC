@@ -19,10 +19,10 @@
         <div class="header-copy">
           <span class="eyebrow">Panqueca UMEC</span>
           <h1>Garanta sua ficha</h1>
-          <p>Compra por Pix com confirmação automática ou pagamento em dinheiro na entrega/retirada.</p>
+          <p>Compra por delivery com Pix automático ou pagamento em dinheiro na entrega.</p>
           <div class="header-pills" aria-label="Resumo da compra">
             <span>R$ 10,00 cada</span>
-            <span>Entrega + R$ 2,00</span>
+            <span>Delivery + R$ 2,00</span>
             <span>Pix ou dinheiro</span>
             <span>PDF após confirmação</span>
           </div>
@@ -47,8 +47,8 @@
             <strong data-valor-unitario>R$ 10,00</strong>
           </div>
           <div>
-            <span>Entrega</span>
-            <strong>Opcional</strong>
+            <span>Delivery</span>
+            <strong>Obrigatório</strong>
           </div>
         </div>
 
@@ -73,15 +73,15 @@
             <input id="quantidade" name="quantidade" type="number" min="1" max="75" value="1" required />
           </label>
 
-          <label class="delivery-toggle">
-            <input id="entrega" name="entrega" type="checkbox" />
+          <div class="delivery-toggle delivery-required">
+            <input id="entrega" name="entrega" type="checkbox" checked aria-hidden="true" tabindex="-1" />
             <span>
-              <strong>Quero receber por entrega</strong>
-              <small>A entrega acrescenta R$ 2,00 neste pedido</small>
+              <strong>Entrega obrigatória</strong>
+              <small>A taxa de delivery de R$ 2,00 já está inclusa no total.</small>
             </span>
-          </label>
+          </div>
 
-          <div id="entrega-box" class="delivery-box hidden">
+          <div id="entrega-box" class="delivery-box">
             <div class="delivery-contact">
               <span>Contato da entrega</span>
               <strong id="entrega-telefone-preview">Informe o WhatsApp acima</strong>
@@ -112,7 +112,7 @@
 
           <div class="total-breakdown" aria-live="polite">
             <span>Panquecas: <strong id="subtotal-panquecas">R$ 10,00</strong></span>
-            <span id="taxa-entrega-linha" class="hidden">Entrega: <strong id="taxa-entrega">R$ 2,00</strong></span>
+            <span id="taxa-entrega-linha">Delivery: <strong id="taxa-entrega">R$ 2,00</strong></span>
           </div>
 
           <fieldset class="payment-methods">
@@ -142,7 +142,7 @@
 
           <div class="total-box" aria-live="polite">
             <span>Total</span>
-            <strong id="valor-total">R$ 10,00</strong>
+            <strong id="valor-total">R$ 12,00</strong>
           </div>
 
           <button class="primary-button" id="gerar-pix" type="submit">Gerar Pix</button>

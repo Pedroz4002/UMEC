@@ -102,7 +102,10 @@ function normalizePayload(payload: CompraPayload, maxQuantidade: number) {
   if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > maxQuantidade) {
     throw new Error(`Informe uma quantidade entre 1 e ${maxQuantidade}.`);
   }
-  if (entrega && (!enderecoRua || !enderecoNumero || !enderecoBairro)) {
+  if (!entrega) {
+    throw new Error("No momento, as vendas estão disponíveis apenas por delivery.");
+  }
+  if (!enderecoRua || !enderecoNumero || !enderecoBairro) {
     throw new Error("Informe rua, número e bairro para entrega.");
   }
 
@@ -291,7 +294,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer) {
 }
 
 function formatEndereco(compra: Record<string, unknown>) {
-  if (!compra.entrega) return "Retirada na UMEC";
+  if (!compra.entrega) return "Delivery sem endereço informado";
   const endereco = [
     compra.endereco_rua,
     compra.endereco_numero ? `nº ${compra.endereco_numero}` : "",

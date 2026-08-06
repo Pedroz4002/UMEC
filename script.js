@@ -76,11 +76,11 @@ function setEventoInfo() {
 function updateTotal() {
   const quantidade = Math.max(Number(quantidadeInput.value || 1), 1);
   const subtotal = quantidade * CONFIG.VALOR_UNITARIO;
-  const taxaEntrega = entregaInput.checked ? CONFIG.TAXA_ENTREGA : 0;
+  const taxaEntrega = CONFIG.TAXA_ENTREGA;
 
   subtotalPanquecasEl.textContent = money.format(subtotal);
   taxaEntregaEl.textContent = money.format(CONFIG.TAXA_ENTREGA);
-  taxaEntregaLinha.classList.toggle("hidden", !entregaInput.checked);
+  taxaEntregaLinha.classList.remove("hidden");
   totalEl.textContent = money.format(subtotal + taxaEntrega);
 }
 
@@ -156,11 +156,11 @@ function formatEnderecoEntrega(data) {
 }
 
 function updateEntregaState() {
-  const entregaAtiva = entregaInput.checked;
-  entregaBox.classList.toggle("hidden", !entregaAtiva);
-  entregaRuaInput.required = entregaAtiva;
-  entregaNumeroInput.required = entregaAtiva;
-  entregaBairroInput.required = entregaAtiva;
+  entregaInput.checked = true;
+  entregaBox.classList.remove("hidden");
+  entregaRuaInput.required = true;
+  entregaNumeroInput.required = true;
+  entregaBairroInput.required = true;
   entregaReferenciaInput.required = false;
   entregaTelefonePreview.textContent = formatPhonePreview(byId("whatsapp").value);
   updateTotal();
@@ -201,7 +201,7 @@ async function callFunction(name, payload) {
 }
 
 function buildWhatsAppUrl(compra) {
-  const entregaTexto = compra.entrega ? `Entrega: Sim - ${formatEnderecoEntrega(compra)}` : "Entrega: Não";
+  const entregaTexto = `Entrega: Sim - ${formatEnderecoEntrega({ ...compra, entrega: true })}`;
   const message = [
     `Olá, realizei a compra de ${compra.quantidade} panqueca(s) da UMEC.`,
     "",
@@ -270,7 +270,7 @@ function showCashConfirmed(data, formData) {
   setPixStatus(
     "success",
     "Pedido em dinheiro confirmado",
-    "Suas fichas foram registradas. Separe o pagamento em dinheiro no dia ou na entrega.",
+    "Suas fichas foram registradas. Separe o pagamento em dinheiro para a entrega.",
   );
   pixArea.classList.remove("hidden");
   pixArea.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -335,7 +335,7 @@ compraForm.addEventListener("submit", async (event) => {
     quantidade: Number(quantidadeInput.value),
     forma_pagamento: formaPagamento,
     troco_para: formaPagamento === "dinheiro" ? parseMoneyInput(trocoParaInput.value) : "",
-    entrega: entregaInput.checked,
+    entrega: true,
     endereco_entrega: getEnderecoEntrega(),
   };
 
@@ -349,12 +349,12 @@ compraForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  if (formData.entrega && (!formData.endereco_entrega.rua || !formData.endereco_entrega.numero || !formData.endereco_entrega.bairro)) {
+  if (!formData.endereco_entrega.rua || !formData.endereco_entrega.numero || !formData.endereco_entrega.bairro) {
     setMessage(compraMsg, "Informe rua, número e bairro para entrega.", "error");
     return;
   }
 
-  const totalPedido = (formData.quantidade * CONFIG.VALOR_UNITARIO) + (formData.entrega ? CONFIG.TAXA_ENTREGA : 0);
+  const totalPedido = (formData.quantidade * CONFIG.VALOR_UNITARIO) + CONFIG.TAXA_ENTREGA;
   if (formData.forma_pagamento === "dinheiro" && formData.troco_para && Number(formData.troco_para) <= totalPedido) {
     setMessage(compraMsg, "O valor para troco deve ser maior que o total do pedido.", "error");
     return;
