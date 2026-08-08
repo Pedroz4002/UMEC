@@ -176,8 +176,8 @@ function wrapTextByWidth(
 }
 
 function getEstoqueTotal() {
-  const estoqueTotal = Number(env("ESTOQUE_TOTAL", "75"));
-  return Number.isInteger(estoqueTotal) && estoqueTotal > 0 ? estoqueTotal : 75;
+  const estoqueTotal = Number(env("ESTOQUE_TOTAL", "50"));
+  return Number.isInteger(estoqueTotal) && estoqueTotal > 0 ? estoqueTotal : 50;
 }
 
 function getPixExpirationMinutes() {

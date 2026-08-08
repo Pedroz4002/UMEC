@@ -63,7 +63,7 @@ function parseMoneyValue(value: number | string | undefined) {
 }
 
 function getEstoqueTotal() {
-  const raw = env("ESTOQUE_TOTAL", "75").trim();
+  const raw = env("ESTOQUE_TOTAL", "50").trim();
   if (!raw) return null;
 
   const estoqueTotal = Number(raw);
@@ -408,7 +408,7 @@ Deno.serve(async (req) => {
       return json({ error: "TAXA_ENTREGA inválida." }, 500);
     }
 
-    const payload = normalizePayload(await req.json(), estoqueTotal ?? 75);
+    const payload = normalizePayload(await req.json(), estoqueTotal ?? 50);
     if (payload.formaPagamento === "pix" && !mercadoPagoToken) {
       return json({ error: "Token do Mercado Pago não configurado." }, 500);
     }
