@@ -25,10 +25,17 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
+      - name: Prepare public site
+        shell: bash
+        run: |
+          mkdir public
+          cp index.html admin.html script.js admin.js style.css public/
+          cp -r assets public/assets
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: public
 
       - name: Deploy
         id: deployment

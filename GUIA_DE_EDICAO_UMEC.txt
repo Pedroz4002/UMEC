@@ -61,7 +61,7 @@ PIX_EXPIRATION_MINUTES=10
 WHATSAPP_UMEC=5583998465279
 UMEC_ADMIN_EMAIL=ph493591@gmail.com
 ADMIN_USER=UMEC
-ADMIN_PASSWORD=UMEC2026
+ADMIN_PASSWORD=nunca coloque senha real neste arquivo
 RESEND_API_KEY=chave do Resend
 RESEND_FROM_EMAIL=e-mail remetente aprovado no Resend
 MERCADO_PAGO_ACCESS_TOKEN=token do Mercado Pago
@@ -85,7 +85,7 @@ Esses arquivos ficam publicos no GitHub Pages.
 Segredos devem ficar somente em Supabase > Edge Functions > Secrets.
 
 15. Uso no dia
-Abra o Admin, entre com usuario UMEC e senha UMEC2026.
+Abra o Admin e entre com o usuario configurado em ADMIN_USER e a senha configurada no secret ADMIN_PASSWORD do Supabase.
 Use "Fichas em tempo real" para acompanhar a producao.
 Marque "Entregue" quando a ficha for entregue.
 Use "PDF de entregas" para separar pedidos de entrega.
